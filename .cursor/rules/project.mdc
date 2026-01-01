@@ -1,0 +1,173 @@
+---
+alwaysApply: true
+---
+# Cursor Rules — Guitar Practice App
+
+## Project Context
+
+You are assisting in building a **web-based guitar practice application** focused on **daily structured practice plans**.
+
+**Target user**
+
+* Right-handed guitarist
+* Standard tuning
+* 6-string electric or acoustic guitar
+* Cannot read standard music notation
+* Practices **at least 30 minutes per day**
+* Interested in **jazz guitar**, starting from fundamentals
+
+**Learning constraints**
+
+* Use **chord symbols, fretboard diagrams, and tablature**
+* Do **NOT** use standard music notation (staff notation)
+* All visual elements (diagrams, tabs, animations) must be **stylistically consistent**
+
+---
+
+## Core Product Principles
+
+1. **Clarity beats cleverness**
+
+   * Prefer explicit logic and readable code over abstractions
+   * Optimize for maintainability and iteration
+
+2. **Practice-first design**
+
+   * Every feature should support:
+
+     * Time-based practice
+     * Clear goals
+     * Repetition and progression
+
+3. **Data-driven lessons**
+
+   * Lessons and practice plans should be **data-defined**, not hard-coded
+   * Prefer JSON schemas for lessons, exercises, and schedules
+
+4. **V1 scope discipline**
+
+   * Authentication: simple (email/password or magic link)
+   * No social features in v1
+   * Single instrument configuration (no tunings, no left-handed mode)
+
+---
+
+## Tech Stack Assumptions
+
+(Default unless otherwise specified by the user)
+
+* Frontend: React + TypeScript
+* Styling: Tailwind CSS
+* State: Local state + lightweight store if needed
+* Backend: Serverless or lightweight API (e.g., Next.js API routes)
+* Auth: Simple, off-the-shelf solution
+* Storage: JSON-friendly (lessons, plans, progress)
+
+Do **not** introduce heavy frameworks or complex infrastructure unless explicitly requested.
+
+---
+
+## UI & UX Rules
+
+* Prefer **simple, calm, practice-focused UI**
+* Avoid visual clutter
+* Minimize clicks to start a practice session
+* Show:
+
+  * Time remaining
+  * Current exercise
+  * Clear next step
+
+### Fretboard & Tab Rules
+
+* Always assume:
+
+  * Right-handed guitar
+  * Standard tuning (EADGBE)
+* Fretboard diagrams:
+
+  * Consistent string order (low E at bottom or explicitly documented)
+  * Clear root-note indication
+* Tabs:
+
+  * Monospaced
+  * Aligned
+  * No rhythmic notation beyond spacing
+
+---
+
+## Lesson Content Rules
+
+* Jazz path progression:
+
+  1. Shell voicings
+  2. Common jazz progressions (ii–V–I, blues, turnarounds)
+  3. Adding extensions
+  4. Simple comping patterns
+  5. Optional fills
+
+* Each lesson should define:
+
+  * Goal
+  * Time allocation
+  * Shapes or patterns
+  * How to practice it
+  * Common mistakes
+
+---
+
+## Code Generation Guidelines
+
+When generating or modifying code:
+
+* Prefer **small, composable components**
+* Add comments only when they explain *why*, not *what*
+* Avoid premature optimization
+* Use descriptive names (no abbreviations unless obvious)
+* Keep logic testable
+
+If unsure:
+
+* Ask for clarification instead of guessing
+* Propose a simple version first
+
+---
+
+## JSON & Schema Rules
+
+* JSON should be:
+
+  * Human-readable
+  * Versionable
+  * Extensible
+* Always include:
+
+  * `id`
+  * `type`
+  * `duration`
+  * `difficulty`
+* Avoid nested complexity unless clearly justified
+
+---
+
+## Communication Style
+
+* Be direct and practical
+* Avoid buzzwords
+* Explain tradeoffs when they matter
+* Assume the developer understands fundamentals
+
+---
+
+## Out of Scope (Unless Explicitly Requested)
+
+* Audio transcription
+* AI improvisation generation
+* Multi-instrument support
+* Music theory beyond what is needed to *play*
+
+---
+
+## Golden Rule
+
+If a feature does **not clearly help someone practice guitar more effectively**, it probably does not belong in v1.

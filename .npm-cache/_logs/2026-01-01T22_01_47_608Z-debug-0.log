@@ -1,0 +1,22 @@
+0 verbose cli /opt/homebrew/Cellar/node/23.5.0/bin/node /opt/homebrew/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v23.5.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/scott/repos/guitar/.npmrc
+5 silly config load:file:/Users/scott/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm exec create-next-app@latest apps/web --yes --ts --eslint --tailwind --app --src-dir --no-turbopack --use-npm --no-git --import-alias @/*
+8 verbose argv "exec" "--yes" "--" "create-next-app@latest" "apps/web" "--yes" "--ts" "--eslint" "--tailwind" "--app" "--src-dir" "--no-turbopack" "--use-npm" "--no-git" "--import-alias" "@/*"
+9 verbose logfile logs-max:10 dir:/Users/scott/repos/guitar/.npm-cache/_logs/2026-01-01T22_01_47_608Z-
+10 verbose logfile /Users/scott/repos/guitar/.npm-cache/_logs/2026-01-01T22_01_47_608Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 http fetch GET 200 https://registry.npmjs.org/create-next-app 215ms (cache revalidated)
+14 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+15 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+16 verbose cwd /Users/scott/repos/guitar
+17 verbose os Darwin 25.2.0
+18 verbose node v23.5.0
+19 verbose npm  v10.9.2
+20 verbose exit 0
+21 info ok
