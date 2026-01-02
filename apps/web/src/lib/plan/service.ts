@@ -1,5 +1,6 @@
-import { generatePlanV1 } from "@/lib/plan/generate";
 import type { PlanV1 } from "@/lib/plan/schema";
+import { generatePlanV1 } from "@/lib/plan/generate";
+import { schedulePlanForTrack } from "@/lib/plan/scheduler";
 
 type SupabaseLike = {
   from: (table: string) => any;
@@ -12,8 +13,14 @@ export async function generateAndPersistPlan(input: {
   focusPrompt: string;
   planTrackId: string | null;
   title?: string;
+  mode?: "replace" | "next";
 }): Promise<{ planId: string; plan: PlanV1 }> {
   let resolvedTitle = input.title;
+  let scheduledNextState: { current_phase: number; day_in_phase: number } | null =
+    null;
+  const mode = input.mode ?? "replace";
+  let sequence = 1;
+
   if (input.planTrackId) {
     const trackRes = await input.supabase
       .from("plan_tracks")
@@ -29,32 +36,60 @@ export async function generateAndPersistPlan(input: {
     resolvedTitle = resolvedTitle ?? `${trackRes.data.title}: Daily Practice Plan`;
   }
 
-  const followupsRes = await input.supabase
-    .from("follow_ups")
-    .select("id, title")
-    .eq("user_id", input.userId)
-    .eq("status", "open")
-    .order("created_at", { ascending: true })
-    .limit(1);
+  // Determine sequence for track plans.
+  if (input.planTrackId) {
+    if (mode === "next") {
+      const maxRes = await input.supabase
+        .from("plans")
+        .select("sequence")
+        .eq("user_id", input.userId)
+        .eq("plan_track_id", input.planTrackId)
+        .eq("plan_date", input.date)
+        .order("sequence", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (maxRes.error && maxRes.error.code !== "PGRST116") {
+        throw new Error(maxRes.error.message);
+      }
+      sequence = (maxRes.data?.sequence ?? 0) + 1;
+    } else {
+      sequence = 1;
+    }
+  }
 
-  if (followupsRes.error) throw new Error(followupsRes.error.message);
-
-  const plan = generatePlanV1({
-    date: input.date,
-    focusPrompt: input.focusPrompt,
-    followups: followupsRes.data ?? [],
-  });
+  // Generate: track plans use deterministic scheduler; ad-hoc uses the fallback generator.
+  let plan: PlanV1;
+  if (input.planTrackId) {
+    const scheduled = await schedulePlanForTrack({
+      supabase: input.supabase,
+      userId: input.userId,
+      planTrackId: input.planTrackId,
+      date: input.date,
+      focusPrompt: input.focusPrompt,
+      sequence,
+    });
+    plan = scheduled.plan;
+    scheduledNextState = scheduled.nextState;
+  } else {
+    // Ad-hoc generation stays simple for now.
+    plan = generatePlanV1({
+      date: input.date,
+      focusPrompt: input.focusPrompt,
+      followups: [],
+    });
+  }
 
   if (resolvedTitle) plan.title = resolvedTitle;
 
-  // Track-aware: upsert-like behavior by reading then update/insert.
-  if (input.planTrackId) {
+  // Track-aware: default behavior keeps sequence=1 upsert-like; "next" always inserts a new row.
+  if (input.planTrackId && mode === "replace") {
     const existing = await input.supabase
       .from("plans")
       .select("id")
       .eq("user_id", input.userId)
       .eq("plan_track_id", input.planTrackId)
       .eq("plan_date", input.date)
+      .eq("sequence", 1)
       .limit(1)
       .maybeSingle();
 
@@ -75,6 +110,29 @@ export async function generateAndPersistPlan(input: {
         .single();
 
       if (updated.error) throw new Error(updated.error.message);
+
+      // Only advance progress state once per date. If re-generating for the same date, keep state.
+      const state = await input.supabase
+        .from("track_progress_state")
+        .select("id, last_plan_date")
+        .eq("user_id", input.userId)
+        .eq("plan_track_id", input.planTrackId)
+        .limit(1)
+        .maybeSingle();
+      if (!state.error) {
+        const last = state.data?.last_plan_date as string | null | undefined;
+        if ((!last || last < input.date) && scheduledNextState) {
+          await input.supabase
+            .from("track_progress_state")
+            .update({
+              current_phase: scheduledNextState.current_phase,
+              day_in_phase: scheduledNextState.day_in_phase,
+              last_plan_date: input.date,
+            })
+            .eq("user_id", input.userId)
+            .eq("plan_track_id", input.planTrackId);
+        }
+      }
       return { planId: updated.data.id as string, plan };
     }
   }
@@ -88,10 +146,30 @@ export async function generateAndPersistPlan(input: {
       focus_prompt: plan.focus_prompt,
       plan_json: plan,
       plan_track_id: input.planTrackId,
+      sequence,
     })
     .select("id")
     .single();
 
   if (inserted.error) throw new Error(inserted.error.message);
+
+  // Initialize/advance progress state for new track plan rows.
+  if (input.planTrackId && scheduledNextState) {
+    const up = await input.supabase
+      .from("track_progress_state")
+      .upsert(
+        {
+          user_id: input.userId,
+          plan_track_id: input.planTrackId,
+          current_phase: scheduledNextState.current_phase,
+          day_in_phase: scheduledNextState.day_in_phase,
+          last_plan_date: input.date,
+        },
+        { onConflict: "plan_track_id" },
+      );
+    // Swallow state update errors to avoid blocking plan creation.
+    void up;
+  }
+
   return { planId: inserted.data.id as string, plan };
 }

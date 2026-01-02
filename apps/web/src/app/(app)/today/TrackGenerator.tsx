@@ -13,7 +13,7 @@ export function TrackGenerator(props: { tracks: Track[] }) {
 
   const options = useMemo(() => {
     return [
-      { id: "__adhoc__", title: "Ad-hoc (no track)" },
+      { id: "__adhoc__", title: "Ad-hoc (no learning path)" },
       ...props.tracks,
     ];
   }, [props.tracks]);
@@ -26,7 +26,7 @@ export function TrackGenerator(props: { tracks: Track[] }) {
     const res = await fetch("/api/plan/generate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ plan_track_id }),
+      body: JSON.stringify({ plan_track_id, mode: "replace" }),
     });
 
     const payload = (await res.json().catch(() => null)) as
@@ -46,15 +46,42 @@ export function TrackGenerator(props: { tracks: Track[] }) {
     router.refresh();
   }
 
+  async function nextLesson() {
+    setMessage(null);
+    const plan_track_id = selected === "__adhoc__" ? null : selected;
+    if (!plan_track_id) {
+      setMessage("Pick a learning path for next lesson.");
+      return;
+    }
+
+    const res = await fetch("/api/plan/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ plan_track_id, mode: "next" }),
+    });
+
+    const payload = (await res.json().catch(() => null)) as
+      | null
+      | { ok?: boolean; error?: string; plan_id?: string };
+
+    if (!res.ok || payload?.ok === false) {
+      setMessage(`Error: ${payload?.error ?? "Unknown error"}`);
+      return;
+    }
+
+    setMessage(payload?.plan_id ? `Next lesson created. plan_id=${payload.plan_id}` : "Next lesson created.");
+    router.refresh();
+  }
+
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-sm font-semibold text-zinc-900">
-            Generate a plan
+            Generate a lesson
           </div>
           <div className="text-xs text-zinc-600">
-            Pick a track (or ad-hoc), then generate today’s plan.
+            Pick a learning path (or ad-hoc), then generate today’s lesson.
           </div>
         </div>
 
@@ -81,6 +108,18 @@ export function TrackGenerator(props: { tracks: Track[] }) {
             }}
           >
             {isPending ? "Generating…" : "Generate"}
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60"
+            disabled={isPending}
+            onClick={() => {
+              startTransition(nextLesson);
+            }}
+            title="Create another lesson for this learning path today"
+          >
+            Next lesson
           </button>
         </div>
       </div>

@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     focus_prompt?: string;
     plan_track_id?: string | null;
     title?: string;
+    mode?: "replace" | "next";
   };
 
   const date = body.date ?? todayIsoDate();
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
       : "Beginner jazz guitar: shell voicings + ii–V–I + steady comping time feel.");
   const planTrackId =
     body.plan_track_id === undefined ? null : body.plan_track_id;
+  const mode = body.mode ?? "replace";
 
   try {
     const { planId, plan } = await generateAndPersistPlan({
@@ -37,12 +39,14 @@ export async function POST(request: Request) {
       focusPrompt,
       planTrackId,
       title: body.title,
+      mode,
     });
 
     return NextResponse.json({
       ok: true,
       plan_id: planId,
       plan_track_id: planTrackId,
+      mode,
       date,
       plan,
     });

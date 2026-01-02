@@ -197,6 +197,45 @@ export async function createDefaultJazzTrackForUser() {
   revalidatePath("/plans");
 }
 
+export async function savePracticeReflection(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const date = todayIsoDate();
+
+  const hardNotes = String(formData.get("hard_notes") ?? "").trim();
+  const easyNotes = String(formData.get("easy_notes") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const planIdRaw = String(formData.get("plan_id") ?? "").trim();
+  const planId = planIdRaw ? planIdRaw : null;
+
+  const confidence = {
+    warmup: Number(formData.get("confidence_warmup") ?? 0),
+    review: Number(formData.get("confidence_review") ?? 0),
+    new: Number(formData.get("confidence_new") ?? 0),
+    apply: Number(formData.get("confidence_apply") ?? 0),
+  };
+
+  const sessionId = await getOrCreateTodaySessionId(userId);
+
+  const res = await supabase
+    .from("practice_reflections")
+    .upsert(
+      {
+        user_id: userId,
+        practice_session_id: sessionId,
+        plan_id: planId,
+        session_date: date,
+        hard_notes: hardNotes,
+        easy_notes: easyNotes,
+        notes,
+        confidence_json: confidence,
+      },
+      { onConflict: "practice_session_id" },
+    );
+
+  if (res.error) throw new Error(res.error.message);
+  revalidatePath("/today");
+}
+
 async function getOrCreateTodaySessionId(userId: string) {
   const { supabase } = await requireUserId();
   const date = todayIsoDate();
