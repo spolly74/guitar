@@ -2,6 +2,8 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PlanBlockName, PlanV1 } from "@/lib/plan/types";
+import { revalidatePath } from "next/cache";
+import { generateAndPersistPlan } from "@/lib/plan/service";
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -125,6 +127,42 @@ export async function createAdHocPlanForToday() {
   });
 
   if (error) throw new Error(error.message);
+}
+
+export async function generatePlanForToday() {
+  const { supabase, userId } = await requireUserId();
+  const date = todayIsoDate();
+
+  await generateAndPersistPlan({
+    supabase,
+    userId,
+    date,
+    focusPrompt:
+      "Beginner jazz guitar: shell voicings + ii–V–I + steady comping time feel.",
+    planTrackId: null,
+  });
+
+  revalidatePath("/today");
+}
+
+export async function generatePlanForTrack(formData: FormData) {
+  const { supabase, userId } = await requireUserId();
+  const date = todayIsoDate();
+  const raw = formData.get("plan_track_id");
+  const planTrackId =
+    raw === null ? null : String(raw).trim() || null;
+
+  await generateAndPersistPlan({
+    supabase,
+    userId,
+    date,
+    focusPrompt:
+      "Generate a beginner-friendly plan aligned to this track. Use chord symbols, tabs, and clear instructions (no standard notation).",
+    planTrackId,
+    title: "Daily Practice Plan",
+  });
+
+  revalidatePath("/today");
 }
 
 async function getOrCreateTodaySessionId(userId: string) {

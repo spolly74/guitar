@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { coercePlanV1, type PlanBlockName, type PlanV1 } from "@/lib/plan/types";
-import { createAdHocPlanForToday } from "./actions";
+import { createAdHocPlanForToday, generatePlanForToday, generatePlanForTrack } from "./actions";
 import { ExerciseCard } from "./ExerciseCard";
 
 const BLOCK_ORDER: PlanBlockName[] = ["warmup", "review", "new", "apply"];
@@ -22,6 +22,14 @@ function groupKey(planId: string | null, block: string, slug: string) {
 export default async function TodayPage() {
   const supabase = await createSupabaseServerClient();
   const date = todayIsoDate();
+
+  const tracksRes = await supabase
+    .from("plan_tracks")
+    .select("id, title")
+    .order("created_at", { ascending: true });
+
+  if (tracksRes.error) throw new Error(tracksRes.error.message);
+  const tracks = tracksRes.data ?? [];
 
   const plansRes = await supabase
     .from("plans")
@@ -80,6 +88,8 @@ export default async function TodayPage() {
         <p className="text-sm text-zinc-600">Date: {date}</p>
       </div>
 
+      <TrackSelector tracks={tracks} />
+
       {plans.length === 0 ? (
         <div className="rounded-lg border border-zinc-200 bg-white p-6">
           <div className="text-base font-medium">No plans yet</div>
@@ -87,14 +97,24 @@ export default async function TodayPage() {
             Create a simple ad-hoc plan to start practicing. (We’ll replace this
             with the plan generator next.)
           </p>
-          <form action={createAdHocPlanForToday} className="mt-4">
-            <button
-              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white"
-              type="submit"
-            >
-              Create ad-hoc plan for today
-            </button>
-          </form>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <form action={generatePlanForToday}>
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white"
+                type="submit"
+              >
+                Generate plan for today
+              </button>
+            </form>
+            <form action={createAdHocPlanForToday}>
+              <button
+                className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+                type="submit"
+              >
+                Create stub ad-hoc plan
+              </button>
+            </form>
+          </div>
         </div>
       ) : null}
 
@@ -124,6 +144,49 @@ export default async function TodayPage() {
           />
         );
       })}
+    </div>
+  );
+}
+
+function TrackSelector(props: { tracks: { id: string; title: string }[] }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-zinc-900">
+            Generate a plan for a track
+          </div>
+          <div className="text-xs text-zinc-600">
+            Tracks are managed on Plans. Ad-hoc plans don’t belong to a track.
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <form action={generatePlanForTrack}>
+            <input type="hidden" name="plan_track_id" value="" />
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50"
+              type="submit"
+              title="Generate an ad-hoc plan"
+            >
+              Generate ad-hoc
+            </button>
+          </form>
+
+          {props.tracks.map((t) => (
+            <form key={t.id} action={generatePlanForTrack}>
+              <input type="hidden" name="plan_track_id" value={t.id} />
+              <button
+                className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-3 text-sm font-medium text-white"
+                type="submit"
+                title={`Generate today's plan for ${t.title}`}
+              >
+                Generate: {t.title}
+              </button>
+            </form>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
