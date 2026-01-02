@@ -30,6 +30,7 @@ export const TrackWizardOutputSchema = z.object({
         exercise_slug: z.string().min(1),
         name: z.string().min(1),
         block: z.enum(["warmup", "review", "new", "apply"]),
+        phase: z.number().int().min(1).default(1),
         minutes_default: z.number().int().min(1).max(30),
         difficulty: z.enum(["beginner", "easy", "medium", "hard"]).default("beginner"),
         tags: z.array(z.string()).default([]),
@@ -57,10 +58,84 @@ export const AdHocWizardOutputSchema = z.object({
 
 export type AdHocWizardOutput = z.infer<typeof AdHocWizardOutputSchema>;
 
+const AdHocLessonPlanOutputSchema = z.object({
+  title: z.string().min(1),
+  focus_prompt: z.string().min(1),
+  today_blocks: z
+    .array(
+      z
+        .object({
+          block: z.enum(["warmup", "review", "new", "apply"]),
+          minutes: z.number().int().nonnegative(),
+          items: z.array(
+            z
+              .object({
+                exercise_slug: z.string().min(1),
+                name: z.string().min(1),
+                minutes: z.number().int().nonnegative(),
+                instructions_md: z.string().optional(),
+                tab_text: z.string().optional(),
+                diagram_specs: z.array(z.unknown()).optional(),
+                concept_tags: z.array(z.string()).optional(),
+                common_mistakes: z.array(z.string()).optional(),
+                success_criteria: z.array(z.string()).optional(),
+              })
+              .strict(),
+          ),
+        })
+        .strict(),
+    )
+    .default([]),
+});
+
+export type AdHocLessonPlanOutput = z.infer<typeof AdHocLessonPlanOutputSchema>;
+
 function requiredEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing ${name}`);
   return v;
+}
+
+async function openAiJson(input: {
+  apiKey: string;
+  model: string;
+  temperature: number;
+  system: string;
+  user: unknown;
+}): Promise<unknown> {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${input.apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: input.model,
+      temperature: input.temperature,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: JSON.stringify(input.user) },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`OpenAI planner failed: ${res.status} ${text}`);
+  }
+
+  const json = (await res.json()) as any;
+  const content = json?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") {
+    throw new Error("OpenAI planner returned no content");
+  }
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    throw new Error("OpenAI planner returned non-JSON content");
+  }
 }
 
 export async function runTrackWizard(input: TrackWizardInput): Promise<TrackWizardOutput> {
@@ -76,6 +151,7 @@ export async function runTrackWizard(input: TrackWizardInput): Promise<TrackWiza
     "- Keep it beginner-friendly and practice-first.",
     "- Output STRICT JSON only matching the requested schema.",
     "- Include enough exercises to generate daily plans with 4 blocks: warmup/review/new/apply.",
+    "- IMPORTANT: Return at least 12 exercises total, with at least 2 per block.",
   ].join("\n");
 
   const user = {
@@ -110,42 +186,40 @@ export async function runTrackWizard(input: TrackWizardInput): Promise<TrackWiza
     },
   };
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: JSON.stringify(user) },
-      ],
-    }),
+  const parsed = await openAiJson({
+    apiKey,
+    model,
+    temperature: 0.2,
+    system,
+    user,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI planner failed: ${res.status} ${text}`);
+  const first = TrackWizardOutputSchema.safeParse(parsed);
+  if (first.success) return first.data;
+
+  // If the only issue is "too few exercises", retry once with explicit corrective feedback.
+  const needsMoreExercises = first.error.issues.some(
+    (i) => i.path.join(".") === "exercises" && i.code === "too_small",
+  );
+  if (!needsMoreExercises) {
+    throw first.error;
   }
 
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("OpenAI planner returned no content");
-  }
+  const retryUser = {
+    ...user,
+    correction:
+      "Your previous output had too few exercises. Please output at least 12 exercises total, with at least 2 exercises for each block: warmup, review, new, apply.",
+  };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI planner returned non-JSON content");
-  }
+  const parsed2 = await openAiJson({
+    apiKey,
+    model,
+    temperature: 0.2,
+    system,
+    user: retryUser,
+  });
 
-  return TrackWizardOutputSchema.parse(parsed);
+  return TrackWizardOutputSchema.parse(parsed2);
 }
 
 export async function runAdHocWizard(input: AdHocWizardInput): Promise<AdHocWizardOutput> {
@@ -169,40 +243,69 @@ export async function runAdHocWizard(input: AdHocWizardInput): Promise<AdHocWiza
     output_schema: { title: "string", focus_prompt: "string" },
   };
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: JSON.stringify(user) },
-      ],
-    }),
+  const parsed = await openAiJson({
+    apiKey,
+    model,
+    temperature: 0.2,
+    system,
+    user,
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI ad-hoc planner failed: ${res.status} ${text}`);
-  }
-
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("OpenAI ad-hoc planner returned no content");
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI ad-hoc planner returned non-JSON content");
-  }
-
   return AdHocWizardOutputSchema.parse(parsed);
+}
+
+export async function runAdHocLessonPlan(
+  input: AdHocWizardInput,
+): Promise<AdHocLessonPlanOutput> {
+  const apiKey = requiredEnv("OPENAI_API_KEY");
+  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+
+  const validated = AdHocWizardInputSchema.parse(input);
+
+  const system = [
+    "You create a single ad-hoc guitar practice lesson.",
+    "Rules:",
+    "- No standard music notation. Use chord symbols, tablature, and plain text only.",
+    "- Be prompt-specific: do not reuse generic exercises unless they directly fit the prompt.",
+    "- Keep it beginner-friendly and practice-first.",
+    "- Output STRICT JSON only.",
+    "- You may choose a shorter/simpler structure; unused blocks should have minutes=0 and items=[].",
+    "- IMPORTANT: Always return all four blocks: warmup, review, new, apply.",
+  ].join("\n");
+
+  const user = {
+    prompt: validated.prompt,
+    minutes: validated.minutes,
+    output_schema: {
+      title: "string",
+      focus_prompt: "string",
+      today_blocks: [
+        {
+          block: "warmup|review|new|apply",
+          minutes: "int >= 0",
+          items: [
+            {
+              exercise_slug: "string",
+              name: "string",
+              minutes: "int >= 0",
+              instructions_md: "string",
+              tab_text: "string (optional)",
+              diagram_specs: "array (optional)",
+              concept_tags: "array[string] (optional)",
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const parsed = await openAiJson({
+    apiKey,
+    model,
+    temperature: 0.2,
+    system,
+    user,
+  });
+
+  return AdHocLessonPlanOutputSchema.parse(parsed);
 }

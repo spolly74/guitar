@@ -26,7 +26,7 @@ export function TrackGenerator(props: { tracks: Track[] }) {
     const res = await fetch("/api/plan/generate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ plan_track_id }),
+      body: JSON.stringify({ plan_track_id, mode: "replace" }),
     });
 
     const payload = (await res.json().catch(() => null)) as
@@ -43,6 +43,33 @@ export function TrackGenerator(props: { tracks: Track[] }) {
         ? `Generated. plan_id=${payload.plan_id}`
         : "Generated.",
     );
+    router.refresh();
+  }
+
+  async function nextLesson() {
+    setMessage(null);
+    const plan_track_id = selected === "__adhoc__" ? null : selected;
+    if (!plan_track_id) {
+      setMessage("Pick a learning path for next lesson.");
+      return;
+    }
+
+    const res = await fetch("/api/plan/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ plan_track_id, mode: "next" }),
+    });
+
+    const payload = (await res.json().catch(() => null)) as
+      | null
+      | { ok?: boolean; error?: string; plan_id?: string };
+
+    if (!res.ok || payload?.ok === false) {
+      setMessage(`Error: ${payload?.error ?? "Unknown error"}`);
+      return;
+    }
+
+    setMessage(payload?.plan_id ? `Next lesson created. plan_id=${payload.plan_id}` : "Next lesson created.");
     router.refresh();
   }
 
@@ -81,6 +108,18 @@ export function TrackGenerator(props: { tracks: Track[] }) {
             }}
           >
             {isPending ? "Generating…" : "Generate"}
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60"
+            disabled={isPending}
+            onClick={() => {
+              startTransition(nextLesson);
+            }}
+            title="Create another lesson for this learning path today"
+          >
+            Next lesson
           </button>
         </div>
       </div>

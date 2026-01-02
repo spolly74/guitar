@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       block: e.block,
       minutes_default: e.minutes_default,
       difficulty: e.difficulty ?? "beginner",
-      tags: e.tags ?? [],
+      tags: Array.from(new Set([...(e.tags ?? []), `phase:${e.phase ?? 1}`])),
       instructions_md: e.instructions_md ?? "",
       tab_text: e.tab_text ?? "",
       diagram_specs: e.diagram_specs ?? [],
@@ -95,6 +95,14 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: msg.includes("exercises")
+          ? "Track generator returned too few exercises. Please try again."
+          : msg,
+      },
+      { status: 500 },
+    );
   }
 }

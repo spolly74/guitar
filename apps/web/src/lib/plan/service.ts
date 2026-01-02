@@ -13,10 +13,13 @@ export async function generateAndPersistPlan(input: {
   focusPrompt: string;
   planTrackId: string | null;
   title?: string;
+  mode?: "replace" | "next";
 }): Promise<{ planId: string; plan: PlanV1 }> {
   let resolvedTitle = input.title;
   let scheduledNextState: { current_phase: number; day_in_phase: number } | null =
     null;
+  const mode = input.mode ?? "replace";
+  let sequence = 1;
 
   if (input.planTrackId) {
     const trackRes = await input.supabase
@@ -33,6 +36,27 @@ export async function generateAndPersistPlan(input: {
     resolvedTitle = resolvedTitle ?? `${trackRes.data.title}: Daily Practice Plan`;
   }
 
+  // Determine sequence for track plans.
+  if (input.planTrackId) {
+    if (mode === "next") {
+      const maxRes = await input.supabase
+        .from("plans")
+        .select("sequence")
+        .eq("user_id", input.userId)
+        .eq("plan_track_id", input.planTrackId)
+        .eq("plan_date", input.date)
+        .order("sequence", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (maxRes.error && maxRes.error.code !== "PGRST116") {
+        throw new Error(maxRes.error.message);
+      }
+      sequence = (maxRes.data?.sequence ?? 0) + 1;
+    } else {
+      sequence = 1;
+    }
+  }
+
   // Generate: track plans use deterministic scheduler; ad-hoc uses the fallback generator.
   let plan: PlanV1;
   if (input.planTrackId) {
@@ -42,6 +66,7 @@ export async function generateAndPersistPlan(input: {
       planTrackId: input.planTrackId,
       date: input.date,
       focusPrompt: input.focusPrompt,
+      sequence,
     });
     plan = scheduled.plan;
     scheduledNextState = scheduled.nextState;
@@ -56,14 +81,15 @@ export async function generateAndPersistPlan(input: {
 
   if (resolvedTitle) plan.title = resolvedTitle;
 
-  // Track-aware: upsert-like behavior by reading then update/insert.
-  if (input.planTrackId) {
+  // Track-aware: default behavior keeps sequence=1 upsert-like; "next" always inserts a new row.
+  if (input.planTrackId && mode === "replace") {
     const existing = await input.supabase
       .from("plans")
       .select("id")
       .eq("user_id", input.userId)
       .eq("plan_track_id", input.planTrackId)
       .eq("plan_date", input.date)
+      .eq("sequence", 1)
       .limit(1)
       .maybeSingle();
 
@@ -120,6 +146,7 @@ export async function generateAndPersistPlan(input: {
       focus_prompt: plan.focus_prompt,
       plan_json: plan,
       plan_track_id: input.planTrackId,
+      sequence,
     })
     .select("id")
     .single();

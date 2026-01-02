@@ -18,6 +18,12 @@ type TrackExerciseRow = {
   diagram_specs: any[];
 };
 
+type ExerciseNoteRow = {
+  exercise_slug: string;
+  notes: string | null;
+  created_at: string;
+};
+
 function hashIndex(seed: string, modulo: number): number {
   if (modulo <= 0) return 0;
   const h = sha256Hex(seed).slice(0, 8);
@@ -127,12 +133,131 @@ async function getExerciseLastSeenBySlug(input: {
   return map;
 }
 
+async function getRecentExerciseNotesForTrack(input: {
+  supabase: SupabaseLike;
+  userId: string;
+  planTrackId: string;
+  date: string; // YYYY-MM-DD
+  sequence: number;
+  daysLookback: number;
+  limit: number;
+}) {
+  const since = new Date(Date.now() - input.daysLookback * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  // 1) Prioritize notes from the most recent lesson BEFORE this one (same date, lower sequence).
+  // This is the closest thing to "use the feedback from the last lesson".
+  const prevPlan =
+    input.sequence > 1
+      ? await input.supabase
+          .from("plans")
+          .select("id, sequence")
+          .eq("user_id", input.userId)
+          .eq("plan_track_id", input.planTrackId)
+          .eq("plan_date", input.date)
+          .lt("sequence", input.sequence)
+          .order("sequence", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null as any, error: null as any };
+
+  if (prevPlan.error && prevPlan.error.code !== "PGRST116") {
+    throw new Error(prevPlan.error.message);
+  }
+
+  const primaryPlanId = prevPlan.data?.id ? String(prevPlan.data.id) : null;
+
+  const primaryLogs = primaryPlanId
+    ? await input.supabase
+        .from("exercise_logs")
+        .select("exercise_slug, notes, created_at")
+        .eq("user_id", input.userId)
+        .eq("plan_id", primaryPlanId)
+        .not("notes", "is", null)
+        .neq("notes", "")
+        .order("created_at", { ascending: false })
+        .limit(input.limit)
+    : { data: [] as any[], error: null as any };
+
+  if (primaryLogs.error) throw new Error(primaryLogs.error.message);
+
+  // 2) Then learn from the last 14 days: pull notes from recent lessons, de-duped by slug.
+  const recentPlans = await input.supabase
+    .from("plans")
+    .select("id, plan_date, sequence")
+    .eq("user_id", input.userId)
+    .eq("plan_track_id", input.planTrackId)
+    .gte("plan_date", since)
+    .lte("plan_date", input.date)
+    .order("plan_date", { ascending: false })
+    .order("sequence", { ascending: false })
+    .limit(25);
+
+  if (recentPlans.error) throw new Error(recentPlans.error.message);
+  const planIds = (recentPlans.data ?? [])
+    .map((p: any) => p.id)
+    .filter(Boolean)
+    .map(String)
+    .filter((id: string) => id !== primaryPlanId);
+
+  const recentLogs =
+    planIds.length > 0
+      ? await input.supabase
+          .from("exercise_logs")
+          .select("exercise_slug, notes, created_at")
+          .eq("user_id", input.userId)
+          .in("plan_id", planIds)
+          .not("notes", "is", null)
+          .neq("notes", "")
+          .order("created_at", { ascending: false })
+          .limit(input.limit)
+      : { data: [] as any[], error: null as any };
+
+  if (recentLogs.error) throw new Error(recentLogs.error.message);
+
+  // De-dupe by exercise slug, keep primary lesson notes first.
+  const seen = new Set<string>();
+  const out: ExerciseNoteRow[] = [];
+
+  for (const row of (primaryLogs.data ?? []) as ExerciseNoteRow[]) {
+    const slug = String(row.exercise_slug ?? "");
+    const note = String(row.notes ?? "").trim();
+    if (!slug || !note || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push(row);
+  }
+
+  for (const row of (recentLogs.data ?? []) as ExerciseNoteRow[]) {
+    const slug = String(row.exercise_slug ?? "");
+    const note = String(row.notes ?? "").trim();
+    if (!slug || !note || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push(row);
+  }
+
+  return { rows: out, primary_count: (primaryLogs.data ?? []).length };
+}
+
+function formatNotesForPrompt(rows: ExerciseNoteRow[]) {
+  const lines = rows
+    .map((r) => {
+      const note = String(r.notes ?? "").trim().replace(/\s+/g, " ");
+      if (!note) return null;
+      return `- ${r.exercise_slug}: ${note}`;
+    })
+    .filter(Boolean) as string[];
+  if (lines.length === 0) return "";
+  return ["Notes to address from recent lessons:", ...lines].join("\n");
+}
+
 export async function schedulePlanForTrack(input: {
   supabase: SupabaseLike;
   userId: string;
   planTrackId: string;
   date: string; // YYYY-MM-DD
   focusPrompt: string;
+  sequence?: number;
 }): Promise<{ plan: PlanV1; nextState: { current_phase: number; day_in_phase: number } }> {
   const exercisesRes = await input.supabase
     .from("plan_track_exercises")
@@ -171,6 +296,20 @@ export async function schedulePlanForTrack(input: {
 
   const phaseDef = phases.find((p) => p.phase === currentPhase) ?? phases[0] ?? null;
   const phaseFocus = phaseDef?.focus ?? input.focusPrompt;
+
+  const seq = input.sequence ?? 1;
+  const recentNotesRes = await getRecentExerciseNotesForTrack({
+    supabase: input.supabase,
+    userId: input.userId,
+    planTrackId: input.planTrackId,
+    date: input.date,
+    sequence: seq,
+    daysLookback: 14,
+    limit: 40,
+  });
+  const recentNotes = recentNotesRes.rows;
+  const notedSlugs = new Set(recentNotes.map((r) => r.exercise_slug));
+  const notesForPrompt = formatNotesForPrompt(recentNotes);
 
   const reflectionRes = await input.supabase
     .from("practice_reflections")
@@ -213,6 +352,12 @@ export async function schedulePlanForTrack(input: {
       if (tagged.length > 0) filtered = tagged;
     }
 
+    // For review, if the user left notes on any exercises recently, bias toward those.
+    if (block === "review" && notedSlugs.size > 0) {
+      const noted = filtered.filter((e) => notedSlugs.has(e.exercise_slug));
+      if (noted.length > 0) filtered = noted;
+    }
+
     // Prefer items not seen recently.
     const sorted = [...filtered].sort((a, b) => {
       const aSeen = lastSeen.get(a.exercise_slug) ?? "";
@@ -221,7 +366,10 @@ export async function schedulePlanForTrack(input: {
       return a.exercise_slug.localeCompare(b.exercise_slug);
     });
 
-    return sorted[hashIndex(`${input.planTrackId}:${input.date}:${block}`, sorted.length)]!;
+    const seq = input.sequence ?? 1;
+    return sorted[
+      hashIndex(`${input.planTrackId}:${input.date}:${seq}:${block}`, sorted.length)
+    ]!;
   }
 
   const warmup = pick("warmup");
@@ -314,7 +462,10 @@ export async function schedulePlanForTrack(input: {
     version: "1.0",
     date: input.date,
     title: "Daily Practice Plan",
-    focus_prompt: phaseFocus,
+    focus_prompt:
+      [phaseFocus, notesForPrompt, lastHard ? `Hard: ${lastHard}` : "", lastEasy ? `Easy: ${lastEasy}` : ""]
+        .filter(Boolean)
+        .join("\n\n"),
     assumptions: {
       level: "beginner",
       daily_minutes_target: 30,
@@ -329,7 +480,15 @@ export async function schedulePlanForTrack(input: {
         track_id: input.planTrackId,
         phase: currentPhase,
         day_in_phase: dayInPhase,
-        seed: sha256Hex(stableJsonStringify({ date: input.date, track: input.planTrackId })),
+        seed: sha256Hex(
+          stableJsonStringify({
+            date: input.date,
+            track: input.planTrackId,
+            sequence: input.sequence ?? 1,
+          }),
+        ),
+        notes_included: recentNotes.length,
+        primary_notes_included: recentNotesRes.primary_count,
       },
     ],
   };

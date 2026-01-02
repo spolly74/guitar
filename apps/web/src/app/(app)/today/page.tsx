@@ -43,8 +43,9 @@ export default async function TodayPage() {
 
   const plansRes = await supabase
     .from("plans")
-    .select("id, title, focus_prompt, plan_json, plan_track_id, created_at")
+    .select("id, title, focus_prompt, plan_json, plan_track_id, sequence, created_at")
     .eq("plan_date", date)
+    .order("sequence", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (plansRes.error) throw new Error(plansRes.error.message);
@@ -186,6 +187,7 @@ export default async function TodayPage() {
             logsByKey={logsByKey}
             defaultOpen={plans.length === 1 || idx === 0}
             trackTitle={p.plan_track_id ? trackTitleById.get(p.plan_track_id) ?? "Unknown track" : "Ad-hoc"}
+            sequence={Number(p.sequence ?? 1)}
           />
         );
       })}
@@ -226,6 +228,7 @@ function PlanView(props: {
   >;
   defaultOpen: boolean;
   trackTitle: string;
+  sequence: number;
 }) {
   const blocksByName = new Map(props.plan.today_blocks.map((b) => [b.block, b]));
 
@@ -243,6 +246,9 @@ function PlanView(props: {
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
               <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">
                 {props.trackTitle}
+              </span>
+              <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5">
+                Lesson {props.sequence}
               </span>
               <span>
                 {props.plan.today_blocks.reduce((acc, b) => acc + (b.minutes ?? 0), 0)}{" "}
