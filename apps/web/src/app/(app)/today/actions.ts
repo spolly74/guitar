@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PlanBlockName, PlanV1 } from "@/lib/plan/types";
 import { revalidatePath } from "next/cache";
 import { generateAndPersistPlan } from "@/lib/plan/service";
+import { ensureBeginnerJazzTrack } from "@/lib/tracks/defaults";
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -163,6 +164,37 @@ export async function generatePlanForTrack(formData: FormData) {
   });
 
   revalidatePath("/today");
+}
+
+export async function deletePlanForToday(formData: FormData) {
+  const planId = String(formData.get("plan_id") ?? "").trim();
+  if (!planId) throw new Error("Missing plan_id");
+
+  const { supabase, userId } = await requireUserId();
+
+  // Delete exercise logs first to avoid plan_id -> null uniqueness collisions.
+  const logsDel = await supabase
+    .from("exercise_logs")
+    .delete()
+    .eq("user_id", userId)
+    .eq("plan_id", planId);
+  if (logsDel.error) throw new Error(logsDel.error.message);
+
+  const planDel = await supabase
+    .from("plans")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", planId);
+  if (planDel.error) throw new Error(planDel.error.message);
+
+  revalidatePath("/today");
+}
+
+export async function createDefaultJazzTrackForUser() {
+  const { supabase, userId } = await requireUserId();
+  await ensureBeginnerJazzTrack({ supabase, userId });
+  revalidatePath("/today");
+  revalidatePath("/plans");
 }
 
 async function getOrCreateTodaySessionId(userId: string) {

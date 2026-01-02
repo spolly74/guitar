@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { generateAndPersistPlan } from "@/lib/plan/service";
+import { ensureBeginnerJazzTrack } from "@/lib/tracks/defaults";
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -36,28 +37,7 @@ export async function createTrack(formData: FormData) {
 
 export async function createDefaultJazzTrack() {
   const { supabase, user } = await requireUser();
-
-  const { data: existing, error: existingErr } = await supabase
-    .from("plan_tracks")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("title", "Beginner Jazz Guitar")
-    .limit(1)
-    .maybeSingle();
-
-  if (existingErr && existingErr.code !== "PGRST116") {
-    throw new Error(existingErr.message);
-  }
-
-  if (!existing?.id) {
-    const { error } = await supabase.from("plan_tracks").insert({
-      user_id: user.id,
-      title: "Beginner Jazz Guitar",
-      kind: "program",
-      description: "Shell voicings → ii–V–I → voice leading → comping.",
-    });
-    if (error) throw new Error(error.message);
-  }
+  await ensureBeginnerJazzTrack({ supabase, userId: user.id });
 
   revalidatePath("/plans");
 }

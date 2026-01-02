@@ -23,7 +23,9 @@ export async function POST(request: Request) {
   const date = body.date ?? todayIsoDate();
   const focusPrompt =
     body.focus_prompt ??
-    "Beginner jazz guitar: shell voicings + ii–V–I + steady comping time feel.";
+    (body.plan_track_id
+      ? "Generate a beginner-friendly plan aligned to this track. Use chord symbols, tabs, and clear instructions (no standard notation)."
+      : "Beginner jazz guitar: shell voicings + ii–V–I + steady comping time feel.");
   const planTrackId =
     body.plan_track_id === undefined ? null : body.plan_track_id;
 
@@ -37,9 +39,18 @@ export async function POST(request: Request) {
       title: body.title,
     });
 
-    return NextResponse.json({ plan_id: planId, plan });
+    return NextResponse.json({
+      ok: true,
+      plan_id: planId,
+      plan_track_id: planTrackId,
+      date,
+      plan,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: message, plan_track_id: planTrackId, date },
+      { status: 500 },
+    );
   }
 }

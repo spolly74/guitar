@@ -23,6 +23,7 @@ export default async function PlansPage() {
   if (tracksRes.error) throw new Error(tracksRes.error.message);
 
   const tracks = tracksRes.data ?? [];
+  const hasJazz = tracks.some((t) => t.title === "Beginner Jazz Guitar");
 
   return (
     <div className="flex flex-col gap-8">
@@ -97,7 +98,7 @@ export default async function PlansPage() {
             </div>
           </div>
 
-          {tracks.length === 0 ? (
+          {!hasJazz ? (
             <form action={createDefaultJazzTrack}>
               <button
                 className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"

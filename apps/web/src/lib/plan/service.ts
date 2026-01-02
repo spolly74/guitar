@@ -13,6 +13,22 @@ export async function generateAndPersistPlan(input: {
   planTrackId: string | null;
   title?: string;
 }): Promise<{ planId: string; plan: PlanV1 }> {
+  let resolvedTitle = input.title;
+  if (input.planTrackId) {
+    const trackRes = await input.supabase
+      .from("plan_tracks")
+      .select("id, title")
+      .eq("user_id", input.userId)
+      .eq("id", input.planTrackId)
+      .limit(1)
+      .maybeSingle();
+
+    if (trackRes.error) throw new Error(trackRes.error.message);
+    if (!trackRes.data?.id) throw new Error("Track not found");
+
+    resolvedTitle = resolvedTitle ?? `${trackRes.data.title}: Daily Practice Plan`;
+  }
+
   const followupsRes = await input.supabase
     .from("follow_ups")
     .select("id, title")
@@ -29,7 +45,7 @@ export async function generateAndPersistPlan(input: {
     followups: followupsRes.data ?? [],
   });
 
-  if (input.title) plan.title = input.title;
+  if (resolvedTitle) plan.title = resolvedTitle;
 
   // Track-aware: upsert-like behavior by reading then update/insert.
   if (input.planTrackId) {
