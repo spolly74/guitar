@@ -3,6 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import type { PlanBlockName, PlanExerciseItem } from "@/lib/plan/types";
 import { saveExerciseLog } from "./actions";
+import { isFretboardSpec, type FretboardDiagramSpec } from "@/lib/diagrams/fretboardSpec";
+import { FretboardDiagram } from "./FretboardDiagram";
+import { isChordSpec, type ChordDiagramSpec } from "@/lib/diagrams/chordSpec";
+import { ChordDiagram } from "./ChordDiagram";
 
 export function ExerciseCard(props: {
   planId: string | null;
@@ -153,13 +157,43 @@ export function ExerciseCard(props: {
         </div>
       ) : null}
 
-      {props.item.tab_text ? (
+      {Array.isArray(props.item.diagram_specs) &&
+      props.item.diagram_specs.some(isFretboardSpec) ? (
         <div className="mt-4">
-          <div className="text-sm font-medium text-zinc-700">Tab</div>
-          <pre className="mt-1 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm leading-5">
+          <div className="text-sm font-medium text-zinc-700">Diagram</div>
+          <div className="mt-1 flex flex-col gap-3">
+            {props.item.diagram_specs
+              .filter(isFretboardSpec)
+              .map((spec, idx) => (
+                <FretboardDiagram key={idx} spec={spec as FretboardDiagramSpec} />
+              ))}
+          </div>
+        </div>
+      ) : null}
+
+      {Array.isArray(props.item.diagram_specs) &&
+      props.item.diagram_specs.some(isChordSpec) ? (
+        <div className="mt-4">
+          <div className="text-sm font-medium text-zinc-700">Chord shapes</div>
+          <div className="mt-1 flex flex-wrap gap-3">
+            {props.item.diagram_specs
+              .filter(isChordSpec)
+              .map((spec, idx) => (
+                <ChordDiagram key={idx} spec={spec as ChordDiagramSpec} />
+              ))}
+          </div>
+        </div>
+      ) : null}
+
+      {props.item.tab_text ? (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-700">
+            Tab (optional)
+          </summary>
+          <pre className="mt-2 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm leading-5">
             {props.item.tab_text}
           </pre>
-        </div>
+        </details>
       ) : null}
     </div>
   );

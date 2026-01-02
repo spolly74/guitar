@@ -71,9 +71,46 @@ export function generatePlanV1(input: {
             minutes: followup ? 5 : 10,
             instructions_md:
               "Use shell voicings only. Play 4 steady quarter-note strums per chord, then loop.",
-            tab_text:
-              "Dm7 (R–7):\n\ne|---x---|\nB|---x---|\nG|---5---|\nD|---3---|\nA|---5---|\nE|---x---|\n\nG7 (R–7):\n\ne|---x---|\nB|---x---|\nG|---4---|\nD|---3---|\nA|---5---|\nE|---3---|\n\nCmaj7 (R–7):\n\ne|---x---|\nB|---x---|\nG|---4---|\nD|---2---|\nA|---3---|\nE|---x---|",
-            diagram_specs: [],
+            diagram_specs: [
+              {
+                type: "fretboard",
+                style: "jazz-clean-v1",
+                title: "ii–V–I in C (roots shown)",
+                tuning: ["E2", "A2", "D3", "G3", "B3", "E4"],
+                fret_range: [0, 5],
+                markers: [
+                  { string: 5, fret: 5, label: "D", role: "root", shape: "circle" },
+                  { string: 6, fret: 3, label: "G", role: "root", shape: "circle" },
+                  { string: 5, fret: 3, label: "C", role: "root", shape: "circle" },
+                ],
+                show_fret_numbers: true,
+                color_by_role: true,
+              },
+              {
+                type: "chord",
+                style: "jazz-clean-v1",
+                title: "Dm7 (R–7)",
+                tuning: ["E2", "A2", "D3", "G3", "B3", "E4"],
+                frets: [null, 5, 3, 5, null, null],
+                root_strings: [1],
+              },
+              {
+                type: "chord",
+                style: "jazz-clean-v1",
+                title: "G7 (R–7)",
+                tuning: ["E2", "A2", "D3", "G3", "B3", "E4"],
+                frets: [3, 5, 3, 4, null, null],
+                root_strings: [0],
+              },
+              {
+                type: "chord",
+                style: "jazz-clean-v1",
+                title: "Cmaj7 (R–7)",
+                tuning: ["E2", "A2", "D3", "G3", "B3", "E4"],
+                frets: [null, 3, 2, 4, null, null],
+                root_strings: [1],
+              },
+            ],
             concept_tags: ["shell-voicings", "ii-v-i", "comping"],
             common_mistakes: ["Late changes", "Uneven strums"],
             success_criteria: ["Smooth transitions", "Steady time"],
@@ -91,8 +128,26 @@ export function generatePlanV1(input: {
             instructions_md:
               "Learn two 3–7 shell shapes and move them through ii–V–I in C. Keep your hand relaxed and use minimal motion.",
             tab_text:
-              "Example (guide tones only, concept):\n\nDm7: F–C\nG7: F–B\nCmaj7: E–B\n\n(We'll add exact fretboard diagrams soon.)",
-            diagram_specs: [],
+              "Guide tones only (3rds & 7ths):\n\nDm7: F–C\nG7: F–B\nCmaj7: E–B\n\nUse the diagram to find them on strings 4 (D) and 3 (G).",
+            diagram_specs: [
+              {
+                type: "fretboard",
+                style: "jazz-clean-v1",
+                title: "Guide tones (3rds/7ths) on strings 4 & 3",
+                tuning: ["E2", "A2", "D3", "G3", "B3", "E4"],
+                fret_range: [1, 5],
+                markers: [
+                  { string: 4, fret: 3, label: "F", role: "chord-tone", shape: "circle" },
+                  { string: 3, fret: 5, label: "C", role: "chord-tone", shape: "circle" },
+                  { string: 4, fret: 3, label: "F", role: "chord-tone", shape: "circle" },
+                  { string: 3, fret: 4, label: "B", role: "chord-tone", shape: "circle" },
+                  { string: 4, fret: 2, label: "E", role: "chord-tone", shape: "circle" },
+                  { string: 3, fret: 4, label: "B", role: "chord-tone", shape: "circle" }
+                ],
+                show_fret_numbers: true,
+                color_by_role: false
+              }
+            ],
             concept_tags: ["shell-voicings", "voice-leading", "guide-tones"],
             common_mistakes: ["Gripping too hard", "Not hearing the guide tones"],
             success_criteria: ["Can loop ii–V–I smoothly", "Guide tones ring clearly"],
