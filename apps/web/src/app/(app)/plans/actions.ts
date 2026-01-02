@@ -16,25 +16,6 @@ async function requireUser() {
   return { supabase, user: data.user };
 }
 
-export async function createTrack(formData: FormData) {
-  const title = String(formData.get("title") ?? "").trim();
-  const kind = String(formData.get("kind") ?? "other").trim();
-  const description = String(formData.get("description") ?? "").trim();
-
-  if (!title) throw new Error("Track title is required");
-
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("plan_tracks").insert({
-    user_id: user.id,
-    title,
-    kind,
-    description,
-  });
-
-  if (error) throw new Error(error.message);
-  revalidatePath("/plans");
-}
-
 export async function createDefaultJazzTrack() {
   const { supabase, user } = await requireUser();
   await ensureBeginnerJazzTrack({ supabase, userId: user.id });

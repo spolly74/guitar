@@ -13,7 +13,7 @@ export function TrackGenerator(props: { tracks: Track[] }) {
 
   const options = useMemo(() => {
     return [
-      { id: "__adhoc__", title: "Ad-hoc (no track)" },
+      { id: "__adhoc__", title: "Ad-hoc (no learning path)" },
       ...props.tracks,
     ];
   }, [props.tracks]);
@@ -51,10 +51,10 @@ export function TrackGenerator(props: { tracks: Track[] }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-sm font-semibold text-zinc-900">
-            Generate a plan
+            Generate a lesson
           </div>
           <div className="text-xs text-zinc-600">
-            Pick a track (or ad-hoc), then generate today’s plan.
+            Pick a learning path (or ad-hoc), then generate today’s lesson.
           </div>
         </div>
 

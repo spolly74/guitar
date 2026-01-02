@@ -1,12 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   createDefaultJazzTrack,
-  createTrack,
   deleteTrackAndPlans,
   generateTodaysPlanForTrack,
 } from "./actions";
-
-type TrackKind = "program" | "song" | "technique" | "other";
+import { TrackWizardForm } from "./TrackWizardForm";
 
 export default async function PlansPage() {
   const supabase = await createSupabaseServerClient();
@@ -28,72 +26,20 @@ export default async function PlansPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Plans</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Learning paths</h1>
         <p className="text-sm text-zinc-600">
-          Tracks are long-running goals (jazz program, song, technique). Each
-          track can generate a daily plan.
+          Learning paths are long-running goals. Each path generates a daily lesson.
         </p>
       </div>
 
-      <section className="rounded-lg border border-zinc-200 bg-white p-6">
-        <div className="text-base font-semibold">Create a track</div>
-        <p className="mt-1 text-sm text-zinc-600">
-          Example: “Punk Rock”, “Learn ‘Autumn Leaves’”, “Alternate picking”.
-        </p>
-
-        <form action={createTrack} className="mt-4 grid gap-3 sm:grid-cols-6">
-          <label className="flex flex-col gap-1 sm:col-span-3">
-            <span className="text-sm font-medium text-zinc-700">Title</span>
-            <input
-              className="h-10 rounded-md border border-zinc-200 bg-white px-3 outline-none ring-zinc-900/10 focus:ring-4"
-              name="title"
-              placeholder="Punk Rock"
-              required
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-sm font-medium text-zinc-700">Kind</span>
-            <select
-              className="h-10 rounded-md border border-zinc-200 bg-white px-3 outline-none ring-zinc-900/10 focus:ring-4"
-              name="kind"
-              defaultValue={"program" satisfies TrackKind}
-            >
-              <option value="program">Program</option>
-              <option value="song">Song</option>
-              <option value="technique">Technique</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-
-          <div className="sm:col-span-1 sm:flex sm:items-end">
-            <button
-              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white"
-              type="submit"
-            >
-              Create
-            </button>
-          </div>
-
-          <label className="flex flex-col gap-1 sm:col-span-6">
-            <span className="text-sm font-medium text-zinc-700">
-              Description (optional)
-            </span>
-            <textarea
-              className="min-h-10 rounded-md border border-zinc-200 bg-white px-3 py-2 outline-none ring-zinc-900/10 focus:ring-4"
-              name="description"
-              placeholder="What’s the goal and what should the practice emphasize?"
-            />
-          </label>
-        </form>
-      </section>
+      <TrackWizardForm />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-base font-semibold">Your tracks</div>
+            <div className="text-base font-semibold">Your learning paths</div>
             <div className="text-sm text-zinc-600">
-              Generate today’s plan per track. (Ad-hoc plans are created on
+              Generate today’s lesson per learning path. (Ad-hoc lessons are created on
               Today.)
             </div>
           </div>
@@ -112,7 +58,7 @@ export default async function PlansPage() {
 
         {tracks.length === 0 ? (
           <div className="rounded-lg border border-zinc-200 bg-white p-6 text-sm text-zinc-600">
-            No tracks yet. Create one above (e.g. Punk Rock).
+            No learning paths yet. Create one above (e.g. Punk Rock).
           </div>
         ) : (
           <div className="grid gap-3">
@@ -137,7 +83,7 @@ export default async function PlansPage() {
                         className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-3 text-sm font-medium text-white"
                         type="submit"
                       >
-                        Generate today’s plan
+                        Generate today’s lesson
                       </button>
                     </form>
 
@@ -146,7 +92,7 @@ export default async function PlansPage() {
                       <button
                         className="inline-flex h-9 items-center justify-center rounded-md border border-red-200 bg-white px-3 text-sm font-medium text-red-700 hover:bg-red-50"
                         type="submit"
-                        title="Deletes the track and all plans created for it"
+                        title="Deletes the learning path and all lessons created for it"
                       >
                         Delete
                       </button>

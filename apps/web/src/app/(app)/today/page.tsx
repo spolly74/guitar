@@ -8,6 +8,8 @@ import {
 } from "./actions";
 import { ExerciseCard } from "./ExerciseCard";
 import { TrackGenerator } from "./TrackGenerator";
+import { AdHocWizard } from "./AdHocWizard";
+import { ReflectionForm } from "./ReflectionForm";
 
 const BLOCK_ORDER: PlanBlockName[] = ["warmup", "review", "new", "apply"];
 const BLOCK_LABEL: Record<PlanBlockName, string> = {
@@ -89,6 +91,19 @@ export default async function TodayPage() {
 
   const plans = plansRes.data ?? [];
 
+  const reflectionRes = sessionId
+    ? await supabase
+        .from("practice_reflections")
+        .select("plan_id, hard_notes, easy_notes, notes, confidence_json")
+        .eq("practice_session_id", sessionId)
+        .limit(1)
+        .maybeSingle()
+    : { data: null, error: null as null };
+
+  if ((reflectionRes as any).error) {
+    throw new Error((reflectionRes as any).error.message);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -99,11 +114,11 @@ export default async function TodayPage() {
       {!hasJazz ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="text-sm font-semibold text-amber-900">
-            Default track missing
+            Default learning path missing
           </div>
           <div className="mt-1 text-xs text-amber-900/80">
-            Create the default “Beginner Jazz Guitar” track to generate jazz plans
-            alongside your other tracks.
+            Create the default “Beginner Jazz Guitar” learning path to generate jazz lessons
+            alongside your other learning paths.
           </div>
           <form action={createDefaultJazzTrackForUser} className="mt-3">
             <button
@@ -117,13 +132,13 @@ export default async function TodayPage() {
       ) : null}
 
       <TrackGenerator tracks={tracks} />
+      <AdHocWizard />
 
       {plans.length === 0 ? (
         <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <div className="text-base font-medium">No plans yet</div>
+          <div className="text-base font-medium">No lessons yet</div>
           <p className="mt-1 text-sm text-zinc-600">
-            Create a simple ad-hoc plan to start practicing. (We’ll replace this
-            with the plan generator next.)
+            Create a simple ad-hoc lesson to start practicing.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <form action={generatePlanForToday}>
@@ -131,7 +146,7 @@ export default async function TodayPage() {
                 className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white"
                 type="submit"
               >
-                Generate plan for today
+                Generate lesson for today
               </button>
             </form>
             <form action={createAdHocPlanForToday}>
@@ -139,7 +154,7 @@ export default async function TodayPage() {
                 className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
                 type="submit"
               >
-                Create stub ad-hoc plan
+                Create stub ad-hoc lesson
               </button>
             </form>
           </div>
@@ -154,9 +169,9 @@ export default async function TodayPage() {
               key={p.id}
               className="rounded-lg border border-zinc-200 bg-white p-6"
             >
-              <div className="text-base font-medium">{p.title || "Untitled"}</div>
+              <div className="text-base font-medium">{p.title || "Untitled lesson"}</div>
               <p className="mt-1 text-sm text-zinc-600">
-                This plan has no valid `plan_json` yet. (Expected schema version
+                This lesson has no valid `plan_json` yet. (Expected schema version
                 1.0.)
               </p>
             </div>
@@ -174,6 +189,25 @@ export default async function TodayPage() {
           />
         );
       })}
+
+      <ReflectionForm
+        planOptions={plans.map((p) => ({
+          id: p.id,
+          label: p.title || "Untitled lesson",
+        }))}
+        initial={{
+          planId: (reflectionRes as any).data?.plan_id ?? null,
+          hardNotes: String((reflectionRes as any).data?.hard_notes ?? ""),
+          easyNotes: String((reflectionRes as any).data?.easy_notes ?? ""),
+          notes: String((reflectionRes as any).data?.notes ?? ""),
+          confidence: {
+            warmup: Number((reflectionRes as any).data?.confidence_json?.warmup ?? 0),
+            review: Number((reflectionRes as any).data?.confidence_json?.review ?? 0),
+            new: Number((reflectionRes as any).data?.confidence_json?.new ?? 0),
+            apply: Number((reflectionRes as any).data?.confidence_json?.apply ?? 0),
+          },
+        }}
+      />
     </div>
   );
 }
