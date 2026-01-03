@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { runTrackWizard } from "@/lib/openai/planner";
+import { generateLearningPath14d } from "@/lib/ai/learningPathService";
 
 function slugify(input: string) {
   return input
@@ -44,6 +45,15 @@ export async function POST(request: Request) {
       minutesPerDay,
     });
 
+    // Generate a 14-day learning path curriculum (quality-focused, evidence-backed).
+    // Store it alongside the existing phase curriculum so the current scheduler keeps working.
+    const learningPathRes = await generateLearningPath14d({
+      supabase,
+      user_prompt: `${title}\n\n${goal}`,
+      total_days: 14,
+      daily_minutes: minutesPerDay,
+    });
+
     // Create track
     const trackRes = await supabase
       .from("plan_tracks")
@@ -59,12 +69,17 @@ export async function POST(request: Request) {
     const trackId = trackRes.data.id as string;
 
     // Store curriculum
+    const curriculumJson = {
+      ...generated.curriculum,
+      learning_path_14d: learningPathRes.learningPath,
+      learning_path_sources: learningPathRes.evidence,
+    };
     const curRes = await supabase.from("plan_track_curricula").insert({
       user_id: userId,
       plan_track_id: trackId,
       status: "active",
       version: 1,
-      curriculum_json: generated.curriculum,
+      curriculum_json: curriculumJson,
     });
     if (curRes.error) throw new Error(curRes.error.message);
 
@@ -92,6 +107,7 @@ export async function POST(request: Request) {
       plan_track_id: trackId,
       exercise_count: rows.length,
       phase_count: generated.curriculum.phases.length,
+      learning_path_days: learningPathRes.learningPath.total_days,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";

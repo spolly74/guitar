@@ -7,8 +7,8 @@
 6 silly config load:file:/opt/homebrew/etc/npmrc
 7 verbose title npm run build
 8 verbose argv "run" "build"
-9 verbose logfile logs-max:10 dir:/Users/scott/repos/guitar/.npm-cache/_logs/2026-01-03T06_37_32_964Z-
-10 verbose logfile /Users/scott/repos/guitar/.npm-cache/_logs/2026-01-03T06_37_32_964Z-debug-0.log
+9 verbose logfile logs-max:10 dir:/Users/scott/repos/guitar/.npm-cache/_logs/2026-01-03T18_48_03_581Z-
+10 verbose logfile /Users/scott/repos/guitar/.npm-cache/_logs/2026-01-03T18_48_03_581Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd /Users/scott/repos/guitar/apps/web
