@@ -6,6 +6,38 @@ function requiredEnv(name: string): string {
   return v;
 }
 
+function normalizeLessonCandidate(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const root: any = input;
+
+  const blocks = root.today_blocks;
+  if (!Array.isArray(blocks)) return root;
+
+  for (const b of blocks) {
+    if (!b || typeof b !== "object") continue;
+    const items = (b as any).items;
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      if (!it || typeof it !== "object") continue;
+      const ds = (it as any).diagram_specs;
+      if (ds === undefined) continue;
+
+      if (Array.isArray(ds)) continue;
+
+      // Common model mistake: a single object instead of an array.
+      if (ds && typeof ds === "object") {
+        (it as any).diagram_specs = [ds];
+        continue;
+      }
+
+      // Anything else (string/null/number): drop it to satisfy schema.
+      delete (it as any).diagram_specs;
+    }
+  }
+
+  return root;
+}
+
 async function openAiJson(input: {
   apiKey: string;
   model: string;
@@ -48,6 +80,20 @@ async function openAiJson(input: {
   }
 }
 
+async function loadJazzPolicy(): Promise<string> {
+  const { readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const p = join(process.cwd(), "src", "ai", "policies", "jazz_path.md");
+  return await readFile(p, "utf8");
+}
+
+async function loadPromptDrivenPolicy(): Promise<string> {
+  const { readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const p = join(process.cwd(), "src", "ai", "policies", "prompt_driven.md");
+  return await readFile(p, "utf8");
+}
+
 export async function generateLessonV1FromPrompt(input: {
   date: string; // YYYY-MM-DD
   prompt: string;
@@ -55,6 +101,10 @@ export async function generateLessonV1FromPrompt(input: {
   const apiKey = requiredEnv("OPENAI_API_KEY");
   const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
 
+  const [promptPolicy, jazzPolicy] = await Promise.all([
+    loadPromptDrivenPolicy(),
+    loadJazzPolicy().catch(() => ""),
+  ]);
   const system = [
     "You are a guitar practice lesson generator.",
     "Output rules (CRITICAL):",
@@ -66,6 +116,14 @@ export async function generateLessonV1FromPrompt(input: {
     "- Always include exactly these blocks: warmup, review, new, apply.",
     "- Do NOT output SVG or any pixel/layout math.",
     "- Diagrams are generated deterministically from voicing strings elsewhere; prefer leaving diagram_specs empty/omitted.",
+    "- When describing chord shapes/voicings, do NOT put chord grip strings like x02010 in tab_text. Use instructions_md and chord symbols; voicings come from provided theory/planner JSON.",
+    "- Use tab_text only for single-note/lead lines (melodies, scale fragments).",
+    "",
+    "Policy:",
+    promptPolicy,
+    "",
+    "If no style is specified, default to beginner jazz guitar fundamentals:",
+    jazzPolicy,
   ].join("\n");
 
   const user = {
@@ -114,7 +172,8 @@ export async function generateLessonV1FromPrompt(input: {
     user,
   });
 
-  const first = LessonV1Schema.safeParse(parsed);
+  const normalized = normalizeLessonCandidate(parsed);
+  const first = LessonV1Schema.safeParse(normalized);
   if (first.success) return first.data;
 
   // Retry once with explicit validation errors to nudge the model back into schema.
@@ -126,5 +185,5 @@ export async function generateLessonV1FromPrompt(input: {
     user: { ...user, correction: "Your previous JSON did not validate. Fix and re-output ONLY valid JSON.", issues: first.error.issues },
   });
 
-  return LessonV1Schema.parse(parsed2);
+  return LessonV1Schema.parse(normalizeLessonCandidate(parsed2));
 }

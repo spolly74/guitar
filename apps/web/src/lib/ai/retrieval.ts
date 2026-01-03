@@ -22,6 +22,7 @@ export async function retrieveRagContext(input: {
   topK?: number;
   maxSnippetChars?: number;
   maxTotalChars?: number;
+  minSimilarity?: number;
 }): Promise<{ snippets: RetrievedSnippet[]; contextText: string }> {
   const snippets = await retrieveKnowledge({
     supabase: input.supabase,
@@ -32,9 +33,11 @@ export async function retrieveRagContext(input: {
   const maxSnippetChars = input.maxSnippetChars ?? 900;
   const maxTotalChars = input.maxTotalChars ?? 3000;
 
+  const minSim = input.minSimilarity ?? 0.78;
   const trimmed: RetrievedSnippet[] = [];
   let used = 0;
   for (const s of snippets) {
+    if (Number(s.similarity ?? 0) < minSim) continue;
     const content = trimTo(s.content, maxSnippetChars);
     if (!content) continue;
     if (used + content.length > maxTotalChars) break;

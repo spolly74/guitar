@@ -3,6 +3,40 @@ import type { GuitarTheoryOutput } from "@/lib/ai/guitarTheory";
 import type { LessonPlannerOutput } from "@/lib/ai/lessonPlanner";
 import { chordSpecFromVoicing } from "@/lib/diagrams/voicingToChordSpec";
 
+function extractChordVoicingsFromTabText(tabText: string): Array<{ chord: string; voicing: string }> {
+  const lines = String(tabText ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out: Array<{ chord: string; voicing: string }> = [];
+
+  // Example lines:
+  // Am7: x02010
+  // Dm7 - xx0211
+  // E7 = 020100
+  const re =
+    /^([A-G](?:b|#)?(?:m|maj|min|dim|aug|sus)?\d*(?:add\d+)?(?:\/[A-G](?:b|#)?)?)\s*(?::|=|-|->)\s*([x0-9]{6,24})$/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const chord = m[1]!.trim();
+    const voicing = m[2]!.trim();
+    out.push({ chord, voicing });
+  }
+
+  return out;
+}
+
+function isMostlyVoicingLines(tabText: string, extractedCount: number) {
+  const lines = String(tabText ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return false;
+  return extractedCount > 0 && extractedCount / lines.length >= 0.6;
+}
+
 function firstItemIndex(block: any): number | null {
   const items = block?.items;
   if (!Array.isArray(items) || items.length === 0) return null;
@@ -66,6 +100,42 @@ export function enrichLessonWithDeterministicDiagrams(input: {
     const item = block.items[idx] as any;
     const existing = Array.isArray(item.diagram_specs) ? item.diagram_specs : [];
     item.diagram_specs = [...existing, ...diagrams];
+  }
+
+  // Also: if an item contains chord voicings in tab_text (common LLM behavior),
+  // convert those voicings to chord diagrams and hide the tab.
+  for (const block of lesson.today_blocks) {
+    for (const it of block.items as any[]) {
+      const tab = String(it?.tab_text ?? "").trim();
+      if (!tab) continue;
+
+      const extracted = extractChordVoicingsFromTabText(tab);
+      if (extracted.length === 0) continue;
+
+      const newDiagrams = [];
+      for (const { chord, voicing } of extracted) {
+        try {
+          newDiagrams.push(
+            chordSpecFromVoicing({
+              chordSymbol: chord,
+              voicing,
+              title: `${chord} (${voicing})`,
+            }),
+          );
+        } catch {
+          continue;
+        }
+      }
+
+      if (newDiagrams.length === 0) continue;
+
+      const existing = Array.isArray(it.diagram_specs) ? it.diagram_specs : [];
+      it.diagram_specs = [...existing, ...newDiagrams];
+
+      if (isMostlyVoicingLines(tab, extracted.length)) {
+        it.tab_text = "";
+      }
+    }
   }
 
   lesson.sources = [

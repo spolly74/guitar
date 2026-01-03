@@ -28,3 +28,8 @@ Guidance:
 - Use compact 6-string tab strings (low E -> high e) with:
   - "x" = mute, "0" = open, "1".."24" = fret numbers
   - Example: "x5x56x"
+
+If the user requests CAGED explicitly:
+- Output 5 chord entries labeled with shape names, e.g.:
+  "C (C-shape)", "C (A-shape)", "C (G-shape)", "C (E-shape)", "C (D-shape)"
+- Provide one voicing per labeled chord entry in `voicings`.

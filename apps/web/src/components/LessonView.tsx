@@ -1,7 +1,7 @@
 "use client";
 
 import type { LessonV1 } from "@/lib/schemas/lesson.schema";
-import { DiagramRenderer } from "@/components/DiagramRenderer";
+import { coerceDiagramSpec, DiagramRenderer } from "@/components/DiagramRenderer";
 
 export function LessonView(props: { lesson: LessonV1 }) {
   const lesson = props.lesson;
@@ -45,14 +45,17 @@ export function LessonView(props: { lesson: LessonV1 }) {
 
                   {Array.isArray(it.diagram_specs) && it.diagram_specs.length > 0 ? (
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      {it.diagram_specs.map((spec, idx) => (
-                        <div
-                          key={`${it.exercise_slug}:diagram:${idx}`}
-                          className="overflow-x-auto rounded-md border border-zinc-200 bg-white"
-                        >
-                          <DiagramRenderer spec={spec as any} />
-                        </div>
-                      ))}
+                      {it.diagram_specs
+                        .map((spec) => coerceDiagramSpec(spec))
+                        .filter(Boolean)
+                        .map((spec, idx) => (
+                          <div
+                            key={`${it.exercise_slug}:diagram:${idx}`}
+                            className="overflow-x-auto rounded-md border border-zinc-200 bg-white"
+                          >
+                            <DiagramRenderer spec={spec} />
+                          </div>
+                        ))}
                     </div>
                   ) : null}
                 </div>

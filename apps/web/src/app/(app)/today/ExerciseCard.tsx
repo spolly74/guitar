@@ -7,6 +7,39 @@ import { isFretboardSpec, type FretboardDiagramSpec } from "@/lib/diagrams/fretb
 import { FretboardDiagram } from "./FretboardDiagram";
 import { isChordSpec, type ChordDiagramSpec } from "@/lib/diagrams/chordSpec";
 import { ChordDiagram } from "./ChordDiagram";
+import { chordSpecFromVoicing } from "@/lib/diagrams/voicingToChordSpec";
+
+function extractChordVoicingsFromTabText(tabText: string): Array<{ chord: string; voicing: string }> {
+  const lines = String(tabText ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out: Array<{ chord: string; voicing: string }> = [];
+
+  // Example lines:
+  // Am7: x02010
+  // Dm7 - xx0211
+  // E7 = 020100
+  const re =
+    /^([A-G](?:b|#)?(?:m|maj|min|dim|aug|sus)?\d*(?:add\d+)?(?:\/[A-G](?:b|#)?)?)\s*(?::|=|-|->)\s*([x0-9]{6,24})$/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    out.push({ chord: m[1]!.trim(), voicing: m[2]!.trim() });
+  }
+
+  return out;
+}
+
+function isMostlyVoicingLines(tabText: string, extractedCount: number) {
+  const lines = String(tabText ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return false;
+  return extractedCount > 0 && extractedCount / lines.length >= 0.6;
+}
 
 export function ExerciseCard(props: {
   planId: string | null;
@@ -25,6 +58,40 @@ export function ExerciseCard(props: {
   const [minutes, setMinutes] = useState(props.initial.minutes);
   const [notes, setNotes] = useState(props.initial.notes);
   const [flagged, setFlagged] = useState(props.initial.flaggedForFollowup);
+
+  const chordDiagramsFromTab = useMemo(() => {
+    const tab = String(props.item.tab_text ?? "").trim();
+    if (!tab) return { diagrams: [] as ChordDiagramSpec[], hideTab: false };
+
+    const extracted = extractChordVoicingsFromTabText(tab);
+    if (extracted.length === 0) return { diagrams: [] as ChordDiagramSpec[], hideTab: false };
+
+    const diagrams: ChordDiagramSpec[] = [];
+    for (const { chord, voicing } of extracted) {
+      try {
+        diagrams.push(
+          chordSpecFromVoicing({
+            chordSymbol: chord,
+            voicing,
+            title: `${chord} (${voicing})`,
+          }),
+        );
+      } catch {
+        continue;
+      }
+    }
+
+    return { diagrams, hideTab: diagrams.length > 0 && isMostlyVoicingLines(tab, extracted.length) };
+  }, [props.item.tab_text]);
+
+  const mergedChordDiagramSpecs = useMemo(() => {
+    const existing = Array.isArray(props.item.diagram_specs)
+      ? (props.item.diagram_specs.filter(isChordSpec) as ChordDiagramSpec[])
+      : [];
+    return [...existing, ...chordDiagramsFromTab.diagrams];
+  }, [props.item.diagram_specs, chordDiagramsFromTab.diagrams]);
+
+  const hasChordDiagrams = mergedChordDiagramSpecs.length > 0;
 
   const headerRight = useMemo(() => {
     const parts: string[] = [];
@@ -171,21 +238,18 @@ export function ExerciseCard(props: {
         </div>
       ) : null}
 
-      {Array.isArray(props.item.diagram_specs) &&
-      props.item.diagram_specs.some(isChordSpec) ? (
+      {hasChordDiagrams ? (
         <div className="mt-4">
           <div className="text-sm font-medium text-zinc-700">Chord shapes</div>
           <div className="mt-1 flex flex-wrap gap-3">
-            {props.item.diagram_specs
-              .filter(isChordSpec)
-              .map((spec, idx) => (
-                <ChordDiagram key={idx} spec={spec as ChordDiagramSpec} />
-              ))}
+            {mergedChordDiagramSpecs.map((spec, idx) => (
+              <ChordDiagram key={idx} spec={spec} />
+            ))}
           </div>
         </div>
       ) : null}
 
-      {props.item.tab_text ? (
+      {props.item.tab_text && !chordDiagramsFromTab.hideTab ? (
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-medium text-zinc-700">
             Tab (optional)

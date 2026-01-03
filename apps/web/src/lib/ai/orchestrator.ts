@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { shouldApplyJazzDefault } from "@/lib/ai/styleDetect";
 
 const OrchestratorOutputSchema = z
   .object({
@@ -75,6 +76,16 @@ async function loadOrchestratorSystemPrompt(): Promise<string> {
   return await readFile(p, "utf8");
 }
 
+async function loadJazzPolicy(): Promise<string> {
+  const p = join(process.cwd(), "src", "ai", "policies", "jazz_path.md");
+  return await readFile(p, "utf8");
+}
+
+async function loadPromptDrivenPolicy(): Promise<string> {
+  const p = join(process.cwd(), "src", "ai", "policies", "prompt_driven.md");
+  return await readFile(p, "utf8");
+}
+
 export async function runOrchestrator(input: {
   user_prompt: string;
   minutes_total?: number;
@@ -82,7 +93,12 @@ export async function runOrchestrator(input: {
 }): Promise<OrchestratorOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
   const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
-  const system = await loadOrchestratorSystemPrompt();
+  const [baseSystem, promptPolicy] = await Promise.all([
+    loadOrchestratorSystemPrompt(),
+    loadPromptDrivenPolicy(),
+  ]);
+  const jazzPolicy = shouldApplyJazzDefault(input.user_prompt) ? await loadJazzPolicy() : "";
+  const system = [baseSystem, promptPolicy, jazzPolicy].filter(Boolean).join("\n\n");
 
   const user = {
     user_prompt: input.user_prompt,

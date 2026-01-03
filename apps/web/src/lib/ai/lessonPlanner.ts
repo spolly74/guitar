@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { shouldApplyJazzDefault } from "@/lib/ai/styleDetect";
 
 import type { GuitarTheoryOutput } from "@/lib/ai/guitarTheory";
 
@@ -12,7 +13,7 @@ const PlannerBlockSchema = z
     minutes: z.number().int().min(0).max(60),
     focus: z.string().min(1),
     chords: z.array(z.string().min(1)).default([]),
-    voicings: z.record(z.string(), z.array(z.string().min(1)).min(1).max(3)).default({}),
+    voicings: z.record(z.string(), z.array(z.string().min(1)).min(1).max(8)).default({}),
   })
   .strict();
 
@@ -105,6 +106,16 @@ async function loadSystemPrompt(): Promise<string> {
   return await readFile(p, "utf8");
 }
 
+async function loadJazzPolicy(): Promise<string> {
+  const p = join(process.cwd(), "src", "ai", "policies", "jazz_path.md");
+  return await readFile(p, "utf8");
+}
+
+async function loadPromptDrivenPolicy(): Promise<string> {
+  const p = join(process.cwd(), "src", "ai", "policies", "prompt_driven.md");
+  return await readFile(p, "utf8");
+}
+
 export async function runLessonPlannerAgent(input: {
   user_prompt: string;
   orchestrator_goal: string;
@@ -114,7 +125,9 @@ export async function runLessonPlannerAgent(input: {
 }): Promise<LessonPlannerOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
   const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
-  const system = await loadSystemPrompt();
+  const [baseSystem, promptPolicy] = await Promise.all([loadSystemPrompt(), loadPromptDrivenPolicy()]);
+  const jazzPolicy = shouldApplyJazzDefault(input.user_prompt) ? await loadJazzPolicy() : "";
+  const system = [baseSystem, promptPolicy, jazzPolicy].filter(Boolean).join("\n\n");
 
   const user = {
     user_prompt: input.user_prompt,
