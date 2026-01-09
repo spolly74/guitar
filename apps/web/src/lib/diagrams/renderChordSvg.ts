@@ -44,9 +44,11 @@ export function renderChordSvg(spec: ChordDiagramSpec): string {
   const colors = {
     bg: "#FFFFFF",
     grid: "#111111",
-    dot: "#111111",
-    dotText: "#FFFFFF",
-    root: "#E11D2E",
+    dotFill: "#FFFFFF", // Non-root notes: white fill
+    dotStroke: "#111111", // Non-root notes: black stroke
+    dotText: "#111111", // Non-root notes: black text
+    root: "#E11D2E", // Root notes: red fill
+    rootText: "#FFFFFF", // Root notes: white text
     title: "#111111",
     meta: "#3F3F46",
   };
@@ -133,16 +135,24 @@ export function renderChordSvg(spec: ChordDiagramSpec): string {
     const x = gridLeft + i * dx;
     const y = gridTop + (rel - 0.5) * dy;
     const isRoot = rootSet.has(i);
-    const fill = isRoot ? colors.root : colors.dot;
 
-    parts.push(
-      `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10" fill="${fill}" />`,
-    );
+    // Visual language: Root notes are red filled, non-root notes are white with black stroke
+    if (isRoot) {
+      // Root note: solid red circle
+      parts.push(
+        `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10" fill="${colors.root}" />`,
+      );
+    } else {
+      // Non-root note: white fill with black stroke
+      parts.push(
+        `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10" fill="${colors.dotFill}" stroke="${colors.dotStroke}" stroke-width="2" />`,
+      );
+    }
 
     // Render finger number if available
     const fingerNum = fingerNumbers?.[i];
     if (typeof fingerNum === "number" && fingerNum >= 1 && fingerNum <= 4) {
-      const textColor = isRoot ? colors.dotText : colors.dotText;
+      const textColor = isRoot ? colors.rootText : colors.dotText;
       parts.push(
         `<text x="${x.toFixed(2)}" y="${(y + 4).toFixed(
           2,
