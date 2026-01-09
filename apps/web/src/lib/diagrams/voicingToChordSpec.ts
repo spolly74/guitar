@@ -4,6 +4,19 @@ const STANDARD_TUNING = ["E2", "A2", "D3", "G3", "B3", "E4"] as const;
 
 export function parseCompactVoicingToFrets(voicing: string): Array<number | null> {
   const s = voicing.trim().toLowerCase();
+  // If the voicing is exactly 6 characters (common case), interpret it as
+  // one character per string (low E -> high e). This avoids ambiguity where
+  // sequences like "23" in "xx0231" should mean two adjacent strings (2,3),
+  // not fret 23 on one string.
+  if (/^[x0-9]{6}$/.test(s)) {
+    return s.split("").map((ch) => {
+      if (ch === "x") return null;
+      const n = Number(ch);
+      if (!Number.isFinite(n) || n < 0 || n > 9) throw new Error(`Invalid fret character: '${ch}'`);
+      return n;
+    });
+  }
+
   const out: Array<number | null> = [];
 
   let i = 0;
@@ -21,7 +34,7 @@ export function parseCompactVoicingToFrets(voicing: string): Array<number | null
     }
 
     if (ch >= "0" && ch <= "9") {
-      // Greedy 2-digit parse when it forms 10..24, otherwise 1 digit.
+      // For longer encodings, allow 2-digit frets (10..24).
       const two = s.slice(i, i + 2);
       if (two.length === 2 && two[0] >= "0" && two[0] <= "9" && two[1] >= "0" && two[1] <= "9") {
         const n2 = Number(two);

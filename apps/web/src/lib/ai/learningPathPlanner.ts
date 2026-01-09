@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { loadAiTextAsset } from "@/lib/ai/assets";
+import { openAiJsonChat, plannerModel } from "@/lib/openai/jsonChat";
+import { requiredEnv } from "@/lib/server/requiredEnv";
 
 export const LearningPath14dSchema = z
   .object({
@@ -45,54 +46,8 @@ export const LearningPath14dSchema = z
 
 export type LearningPath14d = z.infer<typeof LearningPath14dSchema>;
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
-}
-
-async function openAiJson(input: {
-  apiKey: string;
-  model: string;
-  temperature: number;
-  system: string;
-  user: unknown;
-}): Promise<unknown> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: input.temperature,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: JSON.stringify(input.user) },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI learning-path-planner failed: ${res.status} ${text}`);
-  }
-
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") throw new Error("OpenAI learning-path-planner returned no content");
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI learning-path-planner returned non-JSON content");
-  }
-}
-
 async function loadSystemPrompt(): Promise<string> {
-  const p = join(process.cwd(), "src", "ai", "agents", "learning-path-planner.prompt.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/agents/learning-path-planner.prompt.md");
 }
 
 export async function runLearningPathPlannerAgent(input: {
@@ -104,7 +59,7 @@ export async function runLearningPathPlannerAgent(input: {
   orchestrator_goal?: string;
 }): Promise<LearningPath14d> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
   const system = await loadSystemPrompt();
 
   const user = {
@@ -132,23 +87,21 @@ export async function runLearningPathPlannerAgent(input: {
     },
   };
 
-  const parsed = await openAiJson({
-    apiKey,
-    model,
-    temperature: 0.2,
-    system,
-    user,
-  });
+  const parsed = await openAiJsonChat({ apiKey, model, temperature: 0.2, system, user });
 
   const first = LearningPath14dSchema.safeParse(parsed);
   if (first.success) return first.data;
 
-  const parsed2 = await openAiJson({
+  const parsed2 = await openAiJsonChat({
     apiKey,
     model,
     temperature: 0.2,
     system,
-    user: { ...user, correction: "Fix validation issues and output ONLY valid JSON.", issues: first.error.issues },
+    user: {
+      ...user,
+      correction: "Fix validation issues and output ONLY valid JSON.",
+      issues: first.error.issues,
+    },
   });
 
   return LearningPath14dSchema.parse(parsed2);

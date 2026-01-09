@@ -121,7 +121,8 @@ export function renderChordSvg(spec: ChordDiagramSpec): string {
     );
   }
 
-  // Dots
+  // Dots with optional finger numbers
+  const fingerNumbers = spec.finger_numbers;
   for (let i = 0; i < strings; i++) {
     const f = spec.frets[i];
     if (typeof f !== "number" || f <= 0) continue;
@@ -131,11 +132,23 @@ export function renderChordSvg(spec: ChordDiagramSpec): string {
 
     const x = gridLeft + i * dx;
     const y = gridTop + (rel - 0.5) * dy;
-    const fill = rootSet.has(i) ? colors.root : colors.dot;
+    const isRoot = rootSet.has(i);
+    const fill = isRoot ? colors.root : colors.dot;
 
     parts.push(
       `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10" fill="${fill}" />`,
     );
+
+    // Render finger number if available
+    const fingerNum = fingerNumbers?.[i];
+    if (typeof fingerNum === "number" && fingerNum >= 1 && fingerNum <= 4) {
+      const textColor = isRoot ? colors.dotText : colors.dotText;
+      parts.push(
+        `<text x="${x.toFixed(2)}" y="${(y + 4).toFixed(
+          2,
+        )}" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="11" font-weight="700" fill="${textColor}">${fingerNum}</text>`,
+      );
+    }
   }
 
   parts.push(`</svg>`);

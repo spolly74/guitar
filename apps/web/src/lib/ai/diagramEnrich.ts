@@ -2,6 +2,12 @@ import type { LessonV1 } from "@/lib/lesson/schema";
 import type { GuitarTheoryOutput } from "@/lib/ai/guitarTheory";
 import type { LessonPlannerOutput } from "@/lib/ai/lessonPlanner";
 import { chordSpecFromVoicing } from "@/lib/diagrams/voicingToChordSpec";
+import {
+  extractChordGripsFromText,
+  extractChordSymbolsFromText,
+} from "@/lib/diagrams/extractChordGrips";
+import { getDefaultOpenChordVoicing } from "@/lib/diagrams/openChordVoicings";
+import { validateChordSpec, formatValidationErrors } from "@/lib/diagrams/validation";
 
 function extractChordVoicingsFromTabText(tabText: string): Array<{ chord: string; voicing: string }> {
   const lines = String(tabText ?? "")
@@ -75,6 +81,7 @@ export function enrichLessonWithDeterministicDiagrams(input: {
     if (idx === null) continue;
 
     const diagrams = [];
+    const errors: string[] = [];
     for (const chord of chords) {
       const v =
         (Array.isArray(voicings[chord]) ? voicings[chord][0] : null) ??
@@ -83,16 +90,27 @@ export function enrichLessonWithDeterministicDiagrams(input: {
           : null);
       if (!v || typeof v !== "string") continue;
       try {
-        diagrams.push(
-          chordSpecFromVoicing({
-            chordSymbol: chord,
-            voicing: v,
-            title: `${chord} (${v})`,
-          }),
-        );
-      } catch {
-        continue;
+        const spec = chordSpecFromVoicing({
+          chordSymbol: chord,
+          voicing: v,
+          title: `${chord} (${v})`,
+        });
+
+        // Validate the generated spec
+        const validation = validateChordSpec(spec, "permissive");
+        if (validation.ok) {
+          diagrams.push(validation.data);
+        } else {
+          errors.push(`${chord}: ${formatValidationErrors(validation.errors)}`);
+        }
+      } catch (e) {
+        errors.push(`${chord}: ${e instanceof Error ? e.message : "Unknown error"}`);
       }
+    }
+
+    // Log validation errors for debugging (best-effort, don't fail the lesson)
+    if (errors.length > 0) {
+      console.warn(`[diagramEnrich] Chord diagram validation errors:\n${errors.join("\n")}`);
     }
 
     if (diagrams.length === 0) continue;
@@ -113,18 +131,28 @@ export function enrichLessonWithDeterministicDiagrams(input: {
       if (extracted.length === 0) continue;
 
       const newDiagrams = [];
+      const tabErrors: string[] = [];
       for (const { chord, voicing } of extracted) {
         try {
-          newDiagrams.push(
-            chordSpecFromVoicing({
-              chordSymbol: chord,
-              voicing,
-              title: `${chord} (${voicing})`,
-            }),
-          );
-        } catch {
-          continue;
+          const spec = chordSpecFromVoicing({
+            chordSymbol: chord,
+            voicing,
+            title: `${chord} (${voicing})`,
+          });
+
+          const validation = validateChordSpec(spec, "permissive");
+          if (validation.ok) {
+            newDiagrams.push(validation.data);
+          } else {
+            tabErrors.push(`${chord}: ${formatValidationErrors(validation.errors)}`);
+          }
+        } catch (e) {
+          tabErrors.push(`${chord}: ${e instanceof Error ? e.message : "Unknown error"}`);
         }
+      }
+
+      if (tabErrors.length > 0) {
+        console.warn(`[diagramEnrich] Tab text validation errors:\n${tabErrors.join("\n")}`);
       }
 
       if (newDiagrams.length === 0) continue;
@@ -135,6 +163,84 @@ export function enrichLessonWithDeterministicDiagrams(input: {
       if (isMostlyVoicingLines(tab, extracted.length)) {
         it.tab_text = "";
       }
+    }
+  }
+
+  // Also: chord grips often appear in instructions_md (markdown-ish), e.g. "- **Am (x02210)**".
+  // Convert those to chord diagrams too.
+  for (const block of lesson.today_blocks) {
+    for (const it of block.items as any[]) {
+      const text = String(it?.instructions_md ?? "").trim();
+      if (!text) continue;
+
+      const newDiagrams = [];
+      const instructionsErrors: string[] = [];
+      const extractedGrips = extractChordGripsFromText(text);
+      for (const { chord, voicing } of extractedGrips) {
+        try {
+          const spec = chordSpecFromVoicing({
+            chordSymbol: chord,
+            voicing,
+            title: `${chord} (${voicing})`,
+          });
+
+          const validation = validateChordSpec(spec, "permissive");
+          if (validation.ok) {
+            newDiagrams.push(validation.data);
+          } else {
+            instructionsErrors.push(`${chord}: ${formatValidationErrors(validation.errors)}`);
+          }
+        } catch (e) {
+          instructionsErrors.push(`${chord}: ${e instanceof Error ? e.message : "Unknown error"}`);
+        }
+      }
+
+      // Fallback: chord list with no voicings. Use deterministic open-chord shapes when available.
+      if (newDiagrams.length === 0) {
+        const chordSymbols = extractChordSymbolsFromText(text);
+        for (const chord of chordSymbols) {
+          const voicing = getDefaultOpenChordVoicing(chord);
+          if (!voicing) continue;
+          try {
+            const spec = chordSpecFromVoicing({
+              chordSymbol: chord,
+              voicing,
+              title: `${chord} (${voicing})`,
+            });
+
+            const validation = validateChordSpec(spec, "permissive");
+            if (validation.ok) {
+              newDiagrams.push(validation.data);
+            } else {
+              instructionsErrors.push(`${chord}: ${formatValidationErrors(validation.errors)}`);
+            }
+          } catch (e) {
+            instructionsErrors.push(
+              `${chord}: ${e instanceof Error ? e.message : "Unknown error"}`,
+            );
+          }
+        }
+      }
+
+      if (instructionsErrors.length > 0) {
+        console.warn(
+          `[diagramEnrich] Instructions text validation errors:\n${instructionsErrors.join("\n")}`,
+        );
+      }
+
+      if (newDiagrams.length === 0) continue;
+
+      const existing = Array.isArray(it.diagram_specs) ? it.diagram_specs : [];
+      const combined = [...existing, ...newDiagrams];
+
+      // De-dupe (same voicing may appear multiple times across enrichment steps)
+      const seen = new Set<string>();
+      it.diagram_specs = combined.filter((d: any) => {
+        const key = JSON.stringify(d);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
   }
 

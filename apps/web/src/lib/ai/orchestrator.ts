@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { shouldApplyJazzDefault } from "@/lib/ai/styleDetect";
+import { loadAiTextAsset } from "@/lib/ai/assets";
+import { openAiJsonChat, plannerModel } from "@/lib/openai/jsonChat";
+import { requiredEnv } from "@/lib/server/requiredEnv";
 
 const OrchestratorOutputSchema = z
   .object({
@@ -22,68 +23,16 @@ const OrchestratorOutputSchema = z
 
 export type OrchestratorOutput = z.infer<typeof OrchestratorOutputSchema>;
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
-}
-
-async function openAiJson(input: {
-  apiKey: string;
-  model: string;
-  temperature: number;
-  system: string;
-  user: unknown;
-}): Promise<unknown> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: input.temperature,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: JSON.stringify(input.user) },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI orchestrator failed: ${res.status} ${text}`);
-  }
-
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("OpenAI orchestrator returned no content");
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI orchestrator returned non-JSON content");
-  }
-}
-
 async function loadOrchestratorSystemPrompt(): Promise<string> {
-  // Keep prompts as first-class artifacts (Phase plan).
-  const p = join(process.cwd(), "src", "ai", "agents", "orchestrator.prompt.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/agents/orchestrator.prompt.md");
 }
 
 async function loadJazzPolicy(): Promise<string> {
-  const p = join(process.cwd(), "src", "ai", "policies", "jazz_path.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/policies/jazz_path.md");
 }
 
 async function loadPromptDrivenPolicy(): Promise<string> {
-  const p = join(process.cwd(), "src", "ai", "policies", "prompt_driven.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/policies/prompt_driven.md");
 }
 
 export async function runOrchestrator(input: {
@@ -92,7 +41,7 @@ export async function runOrchestrator(input: {
   retrieval_context?: string;
 }): Promise<OrchestratorOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
   const [baseSystem, promptPolicy] = await Promise.all([
     loadOrchestratorSystemPrompt(),
     loadPromptDrivenPolicy(),
@@ -115,18 +64,12 @@ export async function runOrchestrator(input: {
     },
   };
 
-  const parsed = await openAiJson({
-    apiKey,
-    model,
-    temperature: 0.1,
-    system,
-    user,
-  });
+  const parsed = await openAiJsonChat({ apiKey, model, temperature: 0.1, system, user });
 
   const first = OrchestratorOutputSchema.safeParse(parsed);
   if (first.success) return first.data;
 
-  const parsed2 = await openAiJson({
+  const parsed2 = await openAiJsonChat({
     apiKey,
     model,
     temperature: 0.1,

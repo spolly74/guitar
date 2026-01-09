@@ -1,10 +1,7 @@
 import { LessonV1Schema } from "@/lib/lesson/schema";
-
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
-}
+import { openAiJsonChat, plannerModel } from "@/lib/openai/jsonChat";
+import { requiredEnv } from "@/lib/server/requiredEnv";
+import { loadAiTextAsset } from "@/lib/ai/assets";
 
 function normalizeLessonCandidate(input: unknown): unknown {
   if (!input || typeof input !== "object") return input;
@@ -45,53 +42,21 @@ async function openAiJson(input: {
   system: string;
   user: unknown;
 }): Promise<unknown> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: input.temperature,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: JSON.stringify(input.user) },
-      ],
-    }),
+  return await openAiJsonChat({
+    apiKey: input.apiKey,
+    model: input.model,
+    temperature: input.temperature,
+    system: input.system,
+    user: input.user,
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI lesson generator failed: ${res.status} ${text}`);
-  }
-
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("OpenAI lesson generator returned no content");
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI lesson generator returned non-JSON content");
-  }
 }
 
 async function loadJazzPolicy(): Promise<string> {
-  const { readFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
-  const p = join(process.cwd(), "src", "ai", "policies", "jazz_path.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/policies/jazz_path.md");
 }
 
 async function loadPromptDrivenPolicy(): Promise<string> {
-  const { readFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
-  const p = join(process.cwd(), "src", "ai", "policies", "prompt_driven.md");
-  return await readFile(p, "utf8");
+  return await loadAiTextAsset("ai/policies/prompt_driven.md");
 }
 
 export async function generateLessonV1FromPrompt(input: {
@@ -99,7 +64,7 @@ export async function generateLessonV1FromPrompt(input: {
   prompt: string;
 }): Promise<import("@/lib/lesson/schema").LessonV1> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
 
   const [promptPolicy, jazzPolicy] = await Promise.all([
     loadPromptDrivenPolicy(),

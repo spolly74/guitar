@@ -8,6 +8,11 @@ import { FretboardDiagram } from "./FretboardDiagram";
 import { isChordSpec, type ChordDiagramSpec } from "@/lib/diagrams/chordSpec";
 import { ChordDiagram } from "./ChordDiagram";
 import { chordSpecFromVoicing } from "@/lib/diagrams/voicingToChordSpec";
+import {
+  extractChordGripsFromText,
+  extractChordSymbolsFromText,
+} from "@/lib/diagrams/extractChordGrips";
+import { getDefaultOpenChordVoicing } from "@/lib/diagrams/openChordVoicings";
 
 function extractChordVoicingsFromTabText(tabText: string): Array<{ chord: string; voicing: string }> {
   const lines = String(tabText ?? "")
@@ -84,12 +89,79 @@ export function ExerciseCard(props: {
     return { diagrams, hideTab: diagrams.length > 0 && isMostlyVoicingLines(tab, extracted.length) };
   }, [props.item.tab_text]);
 
+  const chordDiagramsFromInstructions = useMemo(() => {
+    const text = String(props.item.instructions_md ?? "").trim();
+    if (!text) return [] as ChordDiagramSpec[];
+
+    const diagrams: ChordDiagramSpec[] = [];
+    const extractedGrips = extractChordGripsFromText(text);
+    for (const { chord, voicing } of extractedGrips) {
+      try {
+        diagrams.push(
+          chordSpecFromVoicing({
+            chordSymbol: chord,
+            voicing,
+            title: `${chord} (${voicing})`,
+          }),
+        );
+      } catch {
+        continue;
+      }
+    }
+
+    // Fallback for chord lists without voicings (use deterministic open-chord shapes when available)
+    if (diagrams.length === 0) {
+      const chordSymbols = extractChordSymbolsFromText(text);
+      for (const chord of chordSymbols) {
+        const voicing = getDefaultOpenChordVoicing(chord);
+        if (!voicing) continue;
+        try {
+          diagrams.push(
+            chordSpecFromVoicing({
+              chordSymbol: chord,
+              voicing,
+              title: `${chord} (${voicing})`,
+            }),
+          );
+        } catch {
+          continue;
+        }
+      }
+    }
+    return diagrams;
+  }, [props.item.instructions_md]);
+
+  const instructionsDebug = useMemo(() => {
+    const text = String(props.item.instructions_md ?? "").trim();
+    if (!text) return { grips: [] as Array<{ chord: string; voicing: string }>, symbols: [] as string[] };
+    return {
+      grips: extractChordGripsFromText(text),
+      symbols: extractChordSymbolsFromText(text),
+    };
+  }, [props.item.instructions_md]);
+
   const mergedChordDiagramSpecs = useMemo(() => {
     const existing = Array.isArray(props.item.diagram_specs)
       ? (props.item.diagram_specs.filter(isChordSpec) as ChordDiagramSpec[])
       : [];
-    return [...existing, ...chordDiagramsFromTab.diagrams];
-  }, [props.item.diagram_specs, chordDiagramsFromTab.diagrams]);
+    const combined = [
+      ...existing,
+      ...chordDiagramsFromTab.diagrams,
+      ...chordDiagramsFromInstructions,
+    ];
+
+    const seen = new Set<string>();
+    return combined.filter((d) => {
+      const key = JSON.stringify(d);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [
+    props.item.diagram_specs,
+    chordDiagramsFromTab.diagrams,
+    chordDiagramsFromInstructions,
+  ]);
 
   const hasChordDiagrams = mergedChordDiagramSpecs.length > 0;
 
@@ -145,6 +217,19 @@ export function ExerciseCard(props: {
             <div className="mt-1 text-xs text-zinc-500">
               {props.item.exercise_slug}
             </div>
+            {/* Debug: helps confirm parsing is working when users report missing diagrams */}
+            {process.env.NODE_ENV !== "production" ? (
+              <div className="mt-1 text-[11px] text-zinc-400">
+                diagrams: {mergedChordDiagramSpecs.length} chord,{" "}
+                {Array.isArray(props.item.diagram_specs)
+                  ? props.item.diagram_specs.filter(isFretboardSpec).length
+                  : 0}{" "}
+                fretboard
+                {" · "}
+                instr: {instructionsDebug.grips.length} grips /{" "}
+                {instructionsDebug.symbols.length} symbols
+              </div>
+            ) : null}
           </div>
         </div>
 

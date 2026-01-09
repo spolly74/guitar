@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { LessonV1Schema } from "@/lib/lesson/schema";
-import { generatePlaceholderLessonV1 } from "@/lib/lesson/generatePlaceholder";
 import { generateLessonViaOrchestrator } from "@/lib/ai/dispatcher";
 import { storeGeneratedArtifactsBestEffort } from "@/lib/ai/storeGenerated";
 
@@ -23,22 +21,20 @@ export async function POST(request: Request) {
     | { date?: string; prompt?: string };
   const date = String(body?.date ?? todayIsoDate()).slice(0, 10);
   const prompt = String(body?.prompt ?? "").trim();
+  if (!prompt) {
+    return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
+  }
 
   try {
-    const lesson =
-      prompt.length > 0
-        ? (await generateLessonViaOrchestrator({ supabase, date, user_prompt: prompt })).lesson
-        : LessonV1Schema.parse(generatePlaceholderLessonV1({ date }));
+    const lesson = (await generateLessonViaOrchestrator({ supabase, date, user_prompt: prompt })).lesson;
 
-    if (prompt.length > 0) {
-      // Phase 5: optionally store generated artifacts into the knowledge base (best-effort).
-      await storeGeneratedArtifactsBestEffort({
-        supabase,
-        userId: data.user.id,
-        lesson,
-        theory: (lesson.sources ?? []).find((s: any) => s?.type === "guitar_theory_v1"),
-      });
-    }
+    // Optionally store generated artifacts into the knowledge base (best-effort).
+    await storeGeneratedArtifactsBestEffort({
+      supabase,
+      userId: data.user.id,
+      lesson,
+      theory: (lesson.sources ?? []).find((s: any) => s?.type === "guitar_theory_v1"),
+    });
 
     return NextResponse.json({ ok: true, lesson, meta: { prompt } });
   } catch (e) {

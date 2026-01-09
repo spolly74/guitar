@@ -1,6 +1,10 @@
 # Diagram Rendering System – Guitar App
 
+**Last Updated**: 2026-01-08
+
 This document defines a **deterministic, high‑quality diagram rendering system** for guitar chord diagrams and fretboard diagrams. The system is designed to work with AI-generated *instructions*, not AI-generated images, ensuring accuracy, consistency, and visual coherence.
+
+**NOTE**: For the canonical JSON schema definitions, see [schemas.md](./schemas.md). This document provides implementation guidance and visual design specifications.
 
 ---
 
@@ -85,37 +89,26 @@ interface NoteMarker {
 
 ## Chord Diagram Contract
 
-```ts
-interface ChordDiagramSpec {
-  type: 'chord'
-  label: string
-  startFret: number
-  fretsVisible: number
-  strings: number[]        // usually [6,5,4,3,2,1]
-  notes: NoteMarker[]
-  mutedStrings?: number[]
-  openStrings?: number[]
-}
-```
+**UPDATED**: See [schemas.md](./schemas.md#chord-diagram-schema) for the canonical JSON schema.
 
-### Rules
-- `startFret = 1` implies open chord
-- Finger numbers optional
-- Root note visually distinct
+**Implementation Summary**:
+- Uses `frets: Array<number | null>` (simple array, 0-5 indexed internally)
+- Optional `finger_numbers` array for pedagogical hints
+- Optional `note_roles` array for coloring by musical function
+- `base_fret` auto-inferred if not provided
+
+**Design Rationale**: The implementation uses a simpler `frets` array approach rather than `NoteMarker[]` to make AI generation easier and more reliable. Pedagogical metadata (finger numbers, note roles) is added as optional parallel arrays.
 
 ---
 
 ## Fretboard Diagram Contract
 
-```ts
-interface FretboardDiagramSpec {
-  type: 'fretboard'
-  label: string
-  startFret: number
-  endFret: number
-  notes: NoteMarker[]
-}
-```
+**UPDATED**: See [schemas.md](./schemas.md#fretboard-diagram-schema) for the canonical JSON schema.
+
+**Implementation Summary**:
+- Uses `fret_range: [start, end]` tuple (simpler than separate fields)
+- `markers` array contains individual notes with string (1-6), fret (0-24), and optional label/role
+- String numbering in markers is user-facing (1-6) not internal (0-5)
 
 ---
 

@@ -4,11 +4,7 @@ export type WebSearchResult = {
   snippet: string;
 };
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
-}
+import { requiredEnv } from "@/lib/server/requiredEnv";
 
 function withTimeout(ms: number) {
   const controller = new AbortController();
