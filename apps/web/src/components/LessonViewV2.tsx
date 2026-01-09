@@ -234,11 +234,7 @@ function LessonBlock({
         <div className="px-6 py-4">
           {/* Sections */}
           {block.sections.length > 0 && (
-            <div className="space-y-4">
-              {block.sections.map((section, i) => (
-                <ContentSection key={i} section={section} />
-              ))}
-            </div>
+            <SectionsRenderer sections={block.sections} />
           )}
 
           {/* Exercises */}
@@ -257,6 +253,61 @@ function LessonBlock({
         </div>
       )}
     </section>
+  );
+}
+
+type Section = LessonV2Content["blocks"][0]["sections"][0];
+
+/**
+ * Groups consecutive diagram sections together and renders them in a grid
+ */
+function SectionsRenderer({ sections }: { sections: Section[] }) {
+  const groups: Array<{ type: "diagrams" | "other"; items: Section[] }> = [];
+
+  for (const section of sections) {
+    const isDiagram =
+      section.type === "chord_diagram" ||
+      section.type === "fretboard_diagram" ||
+      section.type === "tablature";
+
+    if (isDiagram) {
+      // Add to existing diagram group or create new one
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup?.type === "diagrams") {
+        lastGroup.items.push(section);
+      } else {
+        groups.push({ type: "diagrams", items: [section] });
+      }
+    } else {
+      groups.push({ type: "other", items: [section] });
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group, groupIndex) => {
+        if (group.type === "diagrams") {
+          // Render diagrams in a responsive grid
+          const isAllChords = group.items.every((s) => s.type === "chord_diagram");
+          const gridCols = isAllChords ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2";
+          return (
+            <div key={groupIndex} className={`grid gap-3 ${gridCols}`}>
+              {group.items.map((section, i) => (
+                <DiagramRenderer
+                  key={i}
+                  diagram={section.content as DiagramSpec}
+                />
+              ))}
+            </div>
+          );
+        } else {
+          // Render non-diagram sections normally
+          return group.items.map((section, i) => (
+            <ContentSection key={`${groupIndex}-${i}`} section={section} />
+          ));
+        }
+      })}
+    </div>
   );
 }
 
@@ -293,15 +344,6 @@ function ContentSection({ section }: { section: LessonV2Content["blocks"][0]["se
         </div>
       </div>
     );
-  }
-
-  if (
-    (section.type === "chord_diagram" ||
-      section.type === "fretboard_diagram" ||
-      section.type === "tablature") &&
-    typeof section.content === "object"
-  ) {
-    return <DiagramRenderer diagram={section.content as DiagramSpec} />;
   }
 
   return null;
