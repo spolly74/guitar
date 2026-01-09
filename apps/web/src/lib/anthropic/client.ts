@@ -75,8 +75,12 @@ export async function claudeJsonChat<T = unknown>(input: {
   model?: string;
   apiKey?: string;
 }): Promise<T> {
+  // Use higher token limit for JSON responses to avoid truncation
+  const maxTokens = input.max_tokens ?? 16384;
+
   const response = await claudeChat({
     ...input,
+    max_tokens: maxTokens,
     messages: [
       {
         role: "user",
@@ -87,6 +91,8 @@ export async function claudeJsonChat<T = unknown>(input: {
 
   // Extract JSON from response (Claude might wrap it in markdown code blocks)
   let jsonStr = response;
+
+  // Try to extract from markdown code blocks first
   const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
     jsonStr = jsonMatch[1].trim();
@@ -100,8 +106,13 @@ export async function claudeJsonChat<T = unknown>(input: {
 
   try {
     return JSON.parse(jsonStr) as T;
-  } catch {
-    throw new Error(`Claude returned non-JSON content: ${response.slice(0, 200)}`);
+  } catch (e) {
+    // Check if the response appears to be truncated
+    const isTruncated = !jsonStr.trim().endsWith("}") && !jsonStr.trim().endsWith("]");
+    if (isTruncated) {
+      throw new Error(`Claude response was truncated. Try reducing the complexity of the request. Response ended with: ...${response.slice(-100)}`);
+    }
+    throw new Error(`Claude returned invalid JSON: ${e instanceof Error ? e.message : "parse error"}. Response: ${response.slice(0, 300)}`);
   }
 }
 

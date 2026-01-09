@@ -80,7 +80,20 @@ Tablature (for specific licks/phrases):
 
 ## Output Format
 
-Return a JSON object matching the LessonV2Content schema exactly.`;
+Return a JSON object with these required fields:
+- version: "2.0" (literal string)
+- id: will be provided, use the lesson_id from input
+- learning_path_id: use the value from input, or null if not provided
+- day_number: use the value from input, or null if not provided
+- date: use the date from input
+- title: descriptive lesson title
+- objective: what the student will learn
+- prerequisites: array of strings (can be empty [])
+- blocks: array of lesson blocks
+- key_takeaways: array of strings summarizing key points
+- estimated_minutes: total lesson time
+
+IMPORTANT: For learning_path_id and day_number, if no value is provided in the input, you MUST use null (not an empty string or placeholder).`;
 
 interface LessonGeneratorInput {
   learningPathId?: string;
@@ -101,12 +114,14 @@ export async function generateLessonV2(
 
   const userMessage = buildUserMessage(input, lessonId, date);
 
-  const parsed = await claudeJsonChat<unknown>({
+  const rawParsed = await claudeJsonChat<unknown>({
     system: SYSTEM_PROMPT,
     user: userMessage,
     temperature: 0.4,
-    max_tokens: 4000,
   });
+
+  // Preprocess: fix common AI mistakes before validation
+  const parsed = preprocessLessonResponse(rawParsed, lessonId, date, input.learningPathId, input.dayNumber);
 
   // Validate and fix the response
   const result = LessonV2ContentSchema.safeParse(parsed);
@@ -122,15 +137,41 @@ export async function generateLessonV2(
     issues: result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
   };
 
-  const parsed2 = await claudeJsonChat<unknown>({
+  const rawParsed2 = await claudeJsonChat<unknown>({
     system: SYSTEM_PROMPT,
     user: retryMessage,
     temperature: 0.2,
-    max_tokens: 4000,
   });
 
+  const parsed2 = preprocessLessonResponse(rawParsed2, lessonId, date, input.learningPathId, input.dayNumber);
   const result2 = LessonV2ContentSchema.parse(parsed2);
   return fixLessonIds(result2, lessonId, input.learningPathId, input.dayNumber);
+}
+
+/**
+ * Preprocess AI response to fix common issues before validation
+ */
+function preprocessLessonResponse(
+  raw: unknown,
+  lessonId: string,
+  date: string,
+  learningPathId?: string,
+  dayNumber?: number
+): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+
+  const obj = raw as Record<string, unknown>;
+
+  // Fix required fields that AI might get wrong
+  return {
+    ...obj,
+    version: "2.0",
+    id: lessonId,
+    date: obj.date || date,
+    // Ensure these are null if not provided, not invalid UUIDs
+    learning_path_id: learningPathId ?? null,
+    day_number: dayNumber ?? null,
+  };
 }
 
 function buildUserMessage(
