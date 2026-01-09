@@ -5,11 +5,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const NAV = [
-  { href: "/today", label: "Today" },
-  { href: "/practice", label: "Practice" },
-  { href: "/plans", label: "Lessons" },
-  { href: "/followups", label: "Follow-ups" },
-  { href: "/library", label: "Library" },
+  { href: "/today-v2", label: "Today" },
+  { href: "/learning-paths", label: "Learning Paths" },
+  { href: "/history", label: "History" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -25,7 +23,7 @@ export default async function AppLayout({
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
-            <Link href="/today" className="font-semibold tracking-tight">
+            <Link href="/today-v2" className="font-semibold tracking-tight">
               Guitar Practice
             </Link>
             <nav className="hidden gap-4 text-sm text-zinc-600 sm:flex">
