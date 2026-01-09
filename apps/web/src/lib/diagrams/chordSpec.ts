@@ -1,16 +1,29 @@
+import type { NoteRole } from "./noteMarker";
+
 export type ChordDiagramSpec = {
   type: "chord";
   style: "jazz-clean-v1";
   title?: string; // e.g. "Dm7 (R–7)"
   tuning: string[]; // ["E2","A2","D3","G3","B3","E4"]
-  // Strings are ordered low->high (6..1). Values:
+
+  // PRIMARY DATA: Simple array approach (strings ordered low->high, indices 0-5)
   // - null => mute (X)
   // - 0 => open (O)
   // - n>=1 => fret number
   frets: Array<number | null>; // length 6
   base_fret?: number; // if omitted, inferred from frets
-  // Optional: mark which string indices (0..5) are roots (for coloring)
+
+  // PEDAGOGICAL METADATA (optional, aligned with frets array)
+  finger_numbers?: Array<number | null>; // 1-4 for fingers, null for no finger marking
+  note_roles?: Array<NoteRole | null>; // musical role of each note ('root', 'third', etc.)
+
+  // LEGACY/CONVENIENCE: mark which string indices (0-5) are roots (for coloring)
+  // If note_roles is provided, this can be derived from it
   root_strings?: number[];
+
+  // DERIVED FIELDS (backward compatibility, can be computed from frets)
+  mutedStrings?: number[]; // indices 0-5 where frets[i] === null
+  openStrings?: number[]; // indices 0-5 where frets[i] === 0
 };
 
 export function isChordSpec(v: unknown): v is ChordDiagramSpec {

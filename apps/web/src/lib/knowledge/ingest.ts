@@ -21,7 +21,7 @@ export async function ingestTextDocument(input: {
   userId: string;
   title: string;
   rawText: string;
-  sourceType?: "text" | "url" | "youtube";
+  sourceType?: "text" | "url" | "youtube" | "lesson" | "theory";
   sourceUrl?: string | null;
 }) {
   const cleaned = input.rawText.trim();

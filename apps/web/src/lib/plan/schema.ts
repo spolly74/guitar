@@ -9,7 +9,15 @@ export const PlanExerciseItemSchema = z
     minutes: z.number().int().nonnegative(),
     instructions_md: z.string().optional(),
     tab_text: z.string().optional(),
-    diagram_specs: z.array(z.unknown()).optional(),
+    // Coerce a common model mistake: a single diagram spec object instead of an array.
+    diagram_specs: z
+      .preprocess((v) => {
+        if (v === undefined) return undefined;
+        if (Array.isArray(v)) return v;
+        if (v && typeof v === "object") return [v];
+        return undefined;
+      }, z.array(z.unknown()).optional())
+      .optional(),
     concept_tags: z.array(z.string()).optional(),
     common_mistakes: z.array(z.string()).optional(),
     success_criteria: z.array(z.string()).optional(),

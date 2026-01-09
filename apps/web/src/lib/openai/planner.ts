@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { openAiJsonChat, plannerModel } from "@/lib/openai/jsonChat";
+import { requiredEnv } from "@/lib/server/requiredEnv";
 
 const TrackWizardInputSchema = z.object({
   title: z.string().min(1),
@@ -90,12 +92,6 @@ const AdHocLessonPlanOutputSchema = z.object({
 
 export type AdHocLessonPlanOutput = z.infer<typeof AdHocLessonPlanOutputSchema>;
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name}`);
-  return v;
-}
-
 async function openAiJson(input: {
   apiKey: string;
   model: string;
@@ -103,44 +99,19 @@ async function openAiJson(input: {
   system: string;
   user: unknown;
 }): Promise<unknown> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: input.temperature,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: JSON.stringify(input.user) },
-      ],
-    }),
+  // Keep local signature for minimal diff; forward to shared helper.
+  return await openAiJsonChat({
+    apiKey: input.apiKey,
+    model: input.model,
+    temperature: input.temperature,
+    system: input.system,
+    user: input.user,
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI planner failed: ${res.status} ${text}`);
-  }
-
-  const json = (await res.json()) as any;
-  const content = json?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("OpenAI planner returned no content");
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("OpenAI planner returned non-JSON content");
-  }
 }
 
 export async function runTrackWizard(input: TrackWizardInput): Promise<TrackWizardOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
 
   const validated = TrackWizardInputSchema.parse(input);
 
@@ -224,7 +195,7 @@ export async function runTrackWizard(input: TrackWizardInput): Promise<TrackWiza
 
 export async function runAdHocWizard(input: AdHocWizardInput): Promise<AdHocWizardOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
 
   const validated = AdHocWizardInputSchema.parse(input);
 
@@ -258,7 +229,7 @@ export async function runAdHocLessonPlan(
   input: AdHocWizardInput,
 ): Promise<AdHocLessonPlanOutput> {
   const apiKey = requiredEnv("OPENAI_API_KEY");
-  const model = process.env.OPENAI_PLANNER_MODEL || "gpt-4o-mini";
+  const model = plannerModel();
 
   const validated = AdHocWizardInputSchema.parse(input);
 
