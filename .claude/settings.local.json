@@ -9,7 +9,12 @@
       "Bash(npm install:*)",
       "Bash(npm run lint:*)",
       "Bash(npx eslint:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(git commit:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git push)",
+      "Bash(npm view:*)"
     ]
   }
 }
