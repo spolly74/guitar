@@ -1,10 +1,5 @@
 import { Readability } from "@mozilla/readability";
-
-// Dynamic import to avoid ESM/CommonJS issues on Vercel
-async function getJSDOM() {
-  const { JSDOM } = await import("jsdom");
-  return JSDOM;
-}
+import { JSDOM } from "jsdom";
 
 export type ImageCandidate = {
   url: string;
@@ -69,7 +64,6 @@ export async function fetchAndExtractReadableText(input: {
   }
 
   const html = await res.text();
-  const JSDOM = await getJSDOM();
   const dom = new JSDOM(html, { url: url.toString() });
   const reader = new Readability(dom.window.document);
   const article = reader.parse();
@@ -86,11 +80,10 @@ export async function fetchAndExtractReadableText(input: {
 
   if (!text) throw new Error("No readable text found on page");
 
-  const images = await extractImageCandidates({
+  const images = extractImageCandidates({
     pageUrl: url.toString(),
     dom,
     articleHtml: article?.content ?? null,
-    JSDOM,
   });
 
   return { title, text, images };
@@ -105,21 +98,17 @@ function pickSrc(img: HTMLImageElement): string | null {
   return srcset.split(",")[0]?.trim().split(" ")[0] ?? null;
 }
 
-type JSDOMClass = Awaited<ReturnType<typeof getJSDOM>>;
-type JSDOMInstance = InstanceType<JSDOMClass>;
-
-async function extractImageCandidates(input: {
+function extractImageCandidates(input: {
   pageUrl: string;
-  dom: JSDOMInstance;
+  dom: JSDOM;
   articleHtml: string | null;
-  JSDOM: JSDOMClass;
-}): Promise<ImageCandidate[]> {
+}): ImageCandidate[] {
   const base = new URL(input.pageUrl);
 
   // Prefer images within the readable article content if available.
   const doc =
     input.articleHtml && input.articleHtml.trim().length > 0
-      ? new input.JSDOM(input.articleHtml, { url: input.pageUrl }).window.document
+      ? new JSDOM(input.articleHtml, { url: input.pageUrl }).window.document
       : input.dom.window.document;
 
   const imgs = Array.from(doc.querySelectorAll("img"));

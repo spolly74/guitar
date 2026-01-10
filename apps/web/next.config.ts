@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Externalize jsdom and its dependencies for serverless compatibility
+  serverExternalPackages: ["jsdom", "parse5", "@mozilla/readability"],
 };
 
 export default nextConfig;
