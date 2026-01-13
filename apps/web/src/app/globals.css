@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Light mode (default) */
 :root {
   /* Warm neutral foundation */
   --background: #faf9f7;
@@ -38,6 +39,72 @@
   --error-subtle: #fef2f2;
 }
 
+/* Dark mode values */
+.dark {
+  --background: #0c0a09;
+  --background-subtle: #1c1917;
+  --foreground: #fafaf9;
+  --foreground-muted: #a8a29e;
+  --foreground-faint: #57534e;
+
+  --border: #292524;
+  --border-subtle: #1c1917;
+
+  --card: #1c1917;
+  --card-hover: #292524;
+
+  --accent: #fbbf24;
+  --accent-foreground: #1c1917;
+  --accent-muted: #78350f;
+  --accent-subtle: #451a03;
+
+  --success: #4ade80;
+  --success-muted: #166534;
+  --success-subtle: #14532d;
+
+  --warning: #fbbf24;
+  --warning-muted: #78350f;
+  --warning-subtle: #451a03;
+
+  --error: #f87171;
+  --error-muted: #991b1b;
+  --error-subtle: #7f1d1d;
+}
+
+/* System preference fallback (when no explicit theme is set) */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --background: #0c0a09;
+    --background-subtle: #1c1917;
+    --foreground: #fafaf9;
+    --foreground-muted: #a8a29e;
+    --foreground-faint: #57534e;
+
+    --border: #292524;
+    --border-subtle: #1c1917;
+
+    --card: #1c1917;
+    --card-hover: #292524;
+
+    --accent: #fbbf24;
+    --accent-foreground: #1c1917;
+    --accent-muted: #78350f;
+    --accent-subtle: #451a03;
+
+    --success: #4ade80;
+    --success-muted: #166534;
+    --success-subtle: #14532d;
+
+    --warning: #fbbf24;
+    --warning-muted: #78350f;
+    --warning-subtle: #451a03;
+
+    --error: #f87171;
+    --error-muted: #991b1b;
+    --error-subtle: #7f1d1d;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-background-subtle: var(--background-subtle);
@@ -70,39 +137,6 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --background-subtle: #1c1917;
-    --foreground: #fafaf9;
-    --foreground-muted: #a8a29e;
-    --foreground-faint: #57534e;
-
-    --border: #292524;
-    --border-subtle: #1c1917;
-
-    --card: #1c1917;
-    --card-hover: #292524;
-
-    --accent: #fbbf24;
-    --accent-foreground: #1c1917;
-    --accent-muted: #78350f;
-    --accent-subtle: #451a03;
-
-    --success: #4ade80;
-    --success-muted: #166534;
-    --success-subtle: #14532d;
-
-    --warning: #fbbf24;
-    --warning-muted: #78350f;
-    --warning-subtle: #451a03;
-
-    --error: #f87171;
-    --error-muted: #991b1b;
-    --error-subtle: #7f1d1d;
-  }
 }
 
 body {
