@@ -4,6 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LessonV2Content } from "@/lib/schemas/v2.schema";
 import { LessonViewV2 } from "@/components/LessonViewV2";
+import {
+  ArrowLeft,
+  MusicNote,
+  Lightning,
+  Sparkle,
+  CheckCircle,
+  Play,
+  CaretRight,
+} from "@phosphor-icons/react";
 
 interface ActivePath {
   id: string;
@@ -102,7 +111,6 @@ export function TodayClient({
 
   async function completeLesson(lessonId: string, pathId?: string) {
     if (pathId) {
-      // Complete learning path day
       const res = await fetch(`/api/paths/${pathId}/complete-day`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,17 +137,14 @@ export function TodayClient({
     router.refresh();
   }
 
-  // If a lesson is selected, show the lesson view
   if (selectedLesson) {
     return (
       <div>
         <button
           onClick={() => setSelectedLesson(null)}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-600 hover:text-zinc-900"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft weight="bold" className="h-4 w-4" />
           Back to Today
         </button>
         <LessonViewV2
@@ -158,15 +163,15 @@ export function TodayClient({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-        <p className="text-sm text-zinc-600">{formatDate(date)}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Today</h1>
+        <p className="text-sm text-foreground-muted">{formatDate(date)}</p>
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-error/20 bg-error-subtle px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}
@@ -174,14 +179,14 @@ export function TodayClient({
       {/* Learning Path Lessons */}
       {activePaths.length > 0 && (
         <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Learning Paths</h2>
-            <p className="text-sm text-zinc-600">Your active learning journeys</p>
+          <div className="flex items-center gap-2">
+            <MusicNote weight="duotone" className="h-5 w-5 text-accent" />
+            <h2 className="text-lg font-semibold text-foreground">Learning Paths</h2>
           </div>
 
           <div className="grid gap-4">
             {activePaths.map((path) => (
-              <PathCard
+              <PathLessonCard
                 key={path.id}
                 path={path}
                 onGenerate={() => generatePathLesson(path.id)}
@@ -203,14 +208,17 @@ export function TodayClient({
 
       {/* Quick Practice */}
       <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Quick Practice</h2>
-          <p className="text-sm text-zinc-600">
-            Generate a one-off lesson from any topic
-          </p>
+        <div className="flex items-center gap-2">
+          <Lightning weight="duotone" className="h-5 w-5 text-accent" />
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Quick Practice</h2>
+            <p className="text-sm text-foreground-muted">
+              Generate a one-off lesson from any topic
+            </p>
+          </div>
         </div>
 
-        <div className="rounded-lg border border-zinc-200 bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex gap-3">
             <input
               type="text"
@@ -218,7 +226,7 @@ export function TodayClient({
               onChange={(e) => setQuickPracticePrompt(e.target.value)}
               placeholder="e.g., Minor pentatonic licks, Bossa nova comping, CAGED C shape"
               disabled={isGenerating}
-              className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-50"
+              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-background-subtle disabled:text-foreground-muted"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -229,7 +237,7 @@ export function TodayClient({
             <button
               onClick={generateQuickPractice}
               disabled={!quickPracticePrompt.trim() || isGenerating}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:bg-zinc-400"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:bg-foreground-faint disabled:text-background"
             >
               {isGenerating ? (
                 <>
@@ -237,7 +245,10 @@ export function TodayClient({
                   Generating...
                 </>
               ) : (
-                "Generate"
+                <>
+                  <Sparkle weight="bold" className="h-4 w-4" />
+                  Generate
+                </>
               )}
             </button>
           </div>
@@ -249,14 +260,16 @@ export function TodayClient({
             {quickPracticeLessons.map((lesson) => (
               <div
                 key={lesson.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:bg-card-hover"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">
+                  <div className="truncate font-medium text-foreground">
                     {lesson.content.title}
                   </div>
-                  <div className="mt-0.5 text-xs text-zinc-500">
-                    {lesson.prompt || "Quick practice"} · {lesson.content.estimated_minutes} min
+                  <div className="mt-1 flex items-center gap-2 text-xs text-foreground-muted">
+                    <span>{lesson.prompt || "Quick practice"}</span>
+                    <span className="text-foreground-faint">·</span>
+                    <span>{lesson.content.estimated_minutes} min</span>
                   </div>
                 </div>
                 <button
@@ -267,8 +280,9 @@ export function TodayClient({
                       isQuickPractice: true,
                     })
                   }
-                  className="ml-3 inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-3 text-sm font-medium text-white hover:bg-zinc-800"
+                  className="ml-4 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
                 >
+                  <Play weight="fill" className="h-3.5 w-3.5" />
                   Practice
                 </button>
               </div>
@@ -279,28 +293,22 @@ export function TodayClient({
 
       {/* Empty State */}
       {activePaths.length === 0 && quickPracticeLessons.length === 0 && (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center">
-          <div className="mx-auto h-12 w-12 text-zinc-300">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-              />
-            </svg>
+        <div className="rounded-xl border border-border bg-card p-10 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-subtle">
+            <MusicNote weight="duotone" className="h-7 w-7 text-accent" />
           </div>
-          <h3 className="mt-4 text-lg font-medium">Ready to practice?</h3>
-          <p className="mt-2 text-sm text-zinc-600">
+          <h3 className="mt-5 text-lg font-semibold text-foreground">Ready to practice?</h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-foreground-muted">
             Create a learning path for structured lessons, or generate a quick
             practice session above.
           </p>
-          <div className="mt-4">
+          <div className="mt-6">
             <a
               href="/learning-paths"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
             >
               Create Learning Path
+              <CaretRight weight="bold" className="h-4 w-4" />
             </a>
           </div>
         </div>
@@ -309,7 +317,7 @@ export function TodayClient({
   );
 }
 
-function PathCard({
+function PathLessonCard({
   path,
   onGenerate,
   onViewLesson,
@@ -328,69 +336,79 @@ function PathCard({
   const lessonCompleted = !!path.todayLesson?.completedAt;
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold">{path.title}</span>
-            {lessonCompleted && (
-              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                Today completed
-              </span>
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">{path.title}</span>
+              {lessonCompleted && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
+                  <CheckCircle weight="fill" className="h-3 w-3" />
+                  Done today
+                </span>
+              )}
+            </div>
+
+            {path.currentDayInfo && (
+              <div className="mt-3">
+                <div className="text-sm font-medium text-foreground">
+                  Day {path.currentDay}: {path.currentDayInfo.title}
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-foreground-muted">
+                  <span>{path.currentDayInfo.focus}</span>
+                  <span className="text-foreground-faint">·</span>
+                  <span>{path.currentDayInfo.estimatedMinutes} min</span>
+                </div>
+              </div>
             )}
           </div>
 
-          {path.currentDayInfo && (
-            <div className="mt-2">
-              <div className="text-sm font-medium text-zinc-700">
-                Day {path.currentDay}: {path.currentDayInfo.title}
-              </div>
-              <div className="mt-0.5 text-xs text-zinc-500">
-                {path.currentDayInfo.focus} · {path.currentDayInfo.estimatedMinutes} min
-              </div>
-            </div>
-          )}
-
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-xs text-zinc-500">
-              <span>Progress</span>
-              <span>
-                Day {path.currentDay} of {path.totalDays}
-              </span>
-            </div>
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-              <div
-                className="h-full bg-zinc-900 transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+          <div className="shrink-0">
+            {hasLesson ? (
+              <button
+                onClick={onViewLesson}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+              >
+                <Play weight="fill" className="h-3.5 w-3.5" />
+                {lessonCompleted ? "Review" : "Practice"}
+              </button>
+            ) : (
+              <button
+                onClick={onGenerate}
+                disabled={isGenerating}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:bg-foreground-faint disabled:text-background"
+              >
+                {isGenerating ? (
+                  <>
+                    <LoadingSpinner />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkle weight="bold" className="h-4 w-4" />
+                    Generate Lesson
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        <div className="shrink-0">
-          {hasLesson ? (
-            <button
-              onClick={onViewLesson}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800"
-            >
-              {lessonCompleted ? "Review" : "Practice"}
-            </button>
-          ) : (
-            <button
-              onClick={onGenerate}
-              disabled={isGenerating}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:bg-zinc-400"
-            >
-              {isGenerating ? (
-                <>
-                  <LoadingSpinner />
-                  Generating...
-                </>
-              ) : (
-                "Generate Lesson"
-              )}
-            </button>
-          )}
+      {/* Progress bar */}
+      <div className="border-t border-border bg-background-subtle px-5 py-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-foreground-muted">Progress</span>
+          <span className="font-medium text-foreground">
+            Day {path.currentDay} of {path.totalDays}
+          </span>
+        </div>
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
+          <div
+            className="h-full rounded-full bg-accent transition-all"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
     </div>
@@ -399,7 +417,7 @@ function PathCard({
 
 function LoadingSpinner() {
   return (
-    <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
       <circle
         className="opacity-25"
         cx="12"

@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LearningPlan } from "@/lib/schemas/v2.schema";
+import {
+  CaretDown,
+  CheckCircle,
+  Clock,
+  Pause,
+  Play,
+  Trash,
+  Check,
+} from "@phosphor-icons/react";
 
 interface PathCardProps {
   id: string;
@@ -120,37 +129,30 @@ export function PathCard({
     }
   }
 
-  const borderColor = {
-    draft: "border-amber-200",
-    active: "border-zinc-200",
-    paused: "border-zinc-200",
-    completed: "border-green-200",
-  }[variant];
-
   return (
-    <div className={`rounded-lg border ${borderColor} bg-white`}>
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div
-        className="cursor-pointer px-6 py-4"
+        className="cursor-pointer px-5 py-4"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="truncate text-lg font-semibold tracking-tight">
+              <span className="truncate text-lg font-semibold tracking-tight text-foreground">
                 {title}
               </span>
               <StatusBadge status={status} />
             </div>
 
             {description && (
-              <p className="mt-1 line-clamp-2 text-sm text-zinc-600">
+              <p className="mt-1.5 line-clamp-2 text-sm text-foreground-muted">
                 {description}
               </p>
             )}
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground-muted">
               {totalDays && (
-                <span>
+                <span className="font-medium">
                   Day {currentDay} of {totalDays}
                 </span>
               )}
@@ -164,14 +166,14 @@ export function PathCard({
             </div>
 
             {status === "in_progress" && totalDays && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>Progress</span>
-                  <span>{progress}%</span>
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-foreground-muted">Progress</span>
+                  <span className="font-medium text-foreground">{progress}%</span>
                 </div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-border">
                   <div
-                    className="h-full bg-zinc-900 transition-all"
+                    className="h-full rounded-full bg-accent transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -180,49 +182,49 @@ export function PathCard({
           </div>
 
           <div className="shrink-0">
-            <svg
-              className={`h-5 w-5 text-zinc-400 transition-transform ${
-                isExpanded ? "rotate-180" : ""
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                isExpanded ? "bg-background-subtle" : ""
               }`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
+              <CaretDown
+                weight="bold"
+                className={`h-4 w-4 text-foreground-muted transition-transform ${
+                  isExpanded ? "rotate-180" : ""
+                }`}
               />
-            </svg>
+            </div>
           </div>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-zinc-100 px-6 py-4">
+        <div className="border-t border-border bg-background-subtle px-5 py-4">
           {error && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="mb-4 rounded-lg border border-error/20 bg-error-subtle px-4 py-3 text-sm text-error">
               {error}
             </div>
           )}
 
           {goal && (
             <div className="mb-4">
-              <div className="text-sm font-medium text-zinc-700">Goal</div>
-              <p className="mt-1 text-sm text-zinc-600">{goal}</p>
+              <div className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                Goal
+              </div>
+              <p className="mt-1 text-sm text-foreground">{goal}</p>
             </div>
           )}
 
           {plan && <PlanPreview plan={plan} currentDay={currentDay} />}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             {status === "draft" && (
               <button
                 onClick={handleApprove}
                 disabled={isLoading}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:bg-zinc-400"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:bg-foreground-faint disabled:text-background"
               >
+                <Play weight="fill" className="h-3.5 w-3.5" />
                 {isLoading ? "Approving..." : "Approve & Start"}
               </button>
             )}
@@ -231,8 +233,9 @@ export function PathCard({
               <button
                 onClick={handlePause}
                 disabled={isLoading}
-                className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:bg-zinc-100"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-background-subtle disabled:text-foreground-muted"
               >
+                <Pause weight="fill" className="h-3.5 w-3.5" />
                 {isLoading ? "Pausing..." : "Pause"}
               </button>
             )}
@@ -241,8 +244,9 @@ export function PathCard({
               <button
                 onClick={handleResume}
                 disabled={isLoading}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:bg-zinc-400"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:bg-foreground-faint disabled:text-background"
               >
+                <Play weight="fill" className="h-3.5 w-3.5" />
                 {isLoading ? "Resuming..." : "Resume"}
               </button>
             )}
@@ -250,8 +254,9 @@ export function PathCard({
             <button
               onClick={handleDelete}
               disabled={isLoading}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-red-200 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:bg-zinc-100 disabled:text-zinc-400"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-error/20 bg-card px-4 text-sm font-medium text-error transition-colors hover:bg-error-subtle disabled:text-foreground-muted"
             >
+              <Trash weight="regular" className="h-4 w-4" />
               Delete
             </button>
           </div>
@@ -262,25 +267,52 @@ export function PathCard({
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles = {
-    draft: "bg-amber-100 text-amber-700",
-    approved: "bg-blue-100 text-blue-700",
-    in_progress: "bg-green-100 text-green-700",
-    paused: "bg-zinc-100 text-zinc-600",
-    completed: "bg-green-100 text-green-700",
-  }[status] || "bg-zinc-100 text-zinc-600";
+  const config = {
+    draft: {
+      bg: "bg-warning-subtle",
+      text: "text-warning",
+      icon: Clock,
+      label: "Pending",
+    },
+    approved: {
+      bg: "bg-accent-subtle",
+      text: "text-accent",
+      icon: CheckCircle,
+      label: "Ready",
+    },
+    in_progress: {
+      bg: "bg-success-subtle",
+      text: "text-success",
+      icon: Play,
+      label: "Active",
+    },
+    paused: {
+      bg: "bg-background-subtle",
+      text: "text-foreground-muted",
+      icon: Pause,
+      label: "Paused",
+    },
+    completed: {
+      bg: "bg-success-subtle",
+      text: "text-success",
+      icon: CheckCircle,
+      label: "Completed",
+    },
+  }[status] || {
+    bg: "bg-background-subtle",
+    text: "text-foreground-muted",
+    icon: Clock,
+    label: status,
+  };
 
-  const labels = {
-    draft: "Pending Approval",
-    approved: "Ready",
-    in_progress: "Active",
-    paused: "Paused",
-    completed: "Completed",
-  }[status] || status;
+  const Icon = config.icon;
 
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles}`}>
-      {labels}
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}
+    >
+      <Icon weight="fill" className="h-3 w-3" />
+      {config.label}
     </span>
   );
 }
@@ -288,7 +320,9 @@ function StatusBadge({ status }: { status: string }) {
 function PlanPreview({ plan, currentDay }: { plan: LearningPlan; currentDay: number }) {
   return (
     <div className="space-y-3">
-      <div className="text-sm font-medium text-zinc-700">Curriculum</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+        Curriculum
+      </div>
       <div className="space-y-2">
         {plan.phases.map((phase) => {
           const phaseDays = phase.days;
@@ -300,25 +334,25 @@ function PlanPreview({ plan, currentDay }: { plan: LearningPlan; currentDay: num
           return (
             <div
               key={phase.number}
-              className={`rounded-lg border p-3 ${
+              className={`rounded-lg border p-4 ${
                 isCurrentPhase
-                  ? "border-zinc-300 bg-zinc-50"
+                  ? "border-accent/30 bg-accent-subtle"
                   : isPastPhase
-                  ? "border-green-200 bg-green-50/50"
-                  : "border-zinc-100 bg-white"
+                  ? "border-success/20 bg-success-subtle"
+                  : "border-border bg-card"
               }`}
             >
               <div className="flex items-center justify-between">
-                <div className="font-medium text-sm">
+                <div className="text-sm font-medium text-foreground">
                   Phase {phase.number}: {phase.title}
                 </div>
-                <div className="text-xs text-zinc-500">
-                  Days {phaseStart}-{phaseEnd}
+                <div className="text-xs text-foreground-muted">
+                  Days {phaseStart}–{phaseEnd}
                 </div>
               </div>
-              <p className="mt-1 text-xs text-zinc-600">{phase.objective}</p>
+              <p className="mt-1 text-xs text-foreground-muted">{phase.objective}</p>
 
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 space-y-1">
                 {phaseDays.map((day) => {
                   const isCurrent = day.day_number === currentDay;
                   const isPast = day.day_number < currentDay;
@@ -328,25 +362,29 @@ function PlanPreview({ plan, currentDay }: { plan: LearningPlan; currentDay: num
                       key={day.day_number}
                       className={`flex items-center gap-2 text-xs ${
                         isCurrent
-                          ? "font-medium text-zinc-900"
+                          ? "font-medium text-foreground"
                           : isPast
-                          ? "text-zinc-400"
-                          : "text-zinc-600"
+                          ? "text-foreground-faint"
+                          : "text-foreground-muted"
                       }`}
                     >
                       <span
-                        className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] ${
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium ${
                           isCurrent
-                            ? "bg-zinc-900 text-white"
+                            ? "bg-accent text-accent-foreground"
                             : isPast
-                            ? "bg-green-200 text-green-700"
-                            : "bg-zinc-100 text-zinc-500"
+                            ? "bg-success-muted text-success"
+                            : "bg-border text-foreground-muted"
                         }`}
                       >
-                        {isPast ? "✓" : day.day_number}
+                        {isPast ? (
+                          <Check weight="bold" className="h-3 w-3" />
+                        ) : (
+                          day.day_number
+                        )}
                       </span>
-                      <span className="truncate">{day.title}</span>
-                      <span className="ml-auto shrink-0 text-zinc-400">
+                      <span className="flex-1 truncate">{day.title}</span>
+                      <span className="shrink-0 text-foreground-faint">
                         {day.estimated_minutes}m
                       </span>
                     </div>

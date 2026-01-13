@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkle, CaretDown, CaretUp } from "@phosphor-icons/react";
 
 interface CreatePathFormProps {
   pathCount: number;
@@ -52,21 +53,26 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6">
-      <div className="text-base font-semibold">Create New Learning Path</div>
-      <p className="mt-1 text-sm text-zinc-600">
+    <div className="rounded-xl border border-border bg-card p-6">
+      <div className="text-base font-semibold text-foreground">
+        Create New Learning Path
+      </div>
+      <p className="mt-1 text-sm text-foreground-muted">
         Enter a guitar topic and the AI will create a structured curriculum.
         {!canCreate && (
-          <span className="text-amber-600">
+          <span className="text-warning">
             {" "}
             You&apos;ve reached the maximum of {MAX_PATHS} paths.
           </span>
         )}
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
         <div>
-          <label htmlFor="topic" className="block text-sm font-medium text-zinc-700">
+          <label
+            htmlFor="topic"
+            className="block text-sm font-medium text-foreground"
+          >
             Topic
           </label>
           <input
@@ -76,7 +82,7 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
             onChange={(e) => setTopic(e.target.value)}
             placeholder="e.g., Jazz shell voicings, CAGED system, Minor pentatonic soloing"
             disabled={isLoading || !canCreate}
-            className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+            className="mt-1.5 block w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-background-subtle disabled:text-foreground-muted"
           />
         </div>
 
@@ -84,15 +90,23 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-sm text-zinc-500 hover:text-zinc-700"
+            className="inline-flex items-center gap-1 text-sm text-foreground-muted transition-colors hover:text-foreground"
           >
+            {showAdvanced ? (
+              <CaretUp weight="bold" className="h-3.5 w-3.5" />
+            ) : (
+              <CaretDown weight="bold" className="h-3.5 w-3.5" />
+            )}
             {showAdvanced ? "Hide" : "Show"} advanced options
           </button>
         </div>
 
         {showAdvanced && (
           <div>
-            <label htmlFor="goals" className="block text-sm font-medium text-zinc-700">
+            <label
+              htmlFor="goals"
+              className="block text-sm font-medium text-foreground"
+            >
               Additional Goals (optional)
             </label>
             <textarea
@@ -102,13 +116,13 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
               placeholder="Any specific goals or areas you want to focus on..."
               rows={2}
               disabled={isLoading || !canCreate}
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+              className="mt-1.5 block w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-background-subtle disabled:text-foreground-muted"
             />
           </div>
         )}
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-lg border border-error/20 bg-error-subtle px-4 py-3 text-sm text-error">
             {error}
           </div>
         )}
@@ -117,7 +131,7 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
           <button
             type="submit"
             disabled={!topic.trim() || isLoading || !canCreate}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:bg-zinc-400 disabled:cursor-not-allowed"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-foreground-faint disabled:text-background"
           >
             {isLoading ? (
               <>
@@ -125,7 +139,10 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
                 Generating plan...
               </>
             ) : (
-              "Create Learning Path"
+              <>
+                <Sparkle weight="bold" className="h-4 w-4" />
+                Create Learning Path
+              </>
             )}
           </button>
         </div>
@@ -137,7 +154,7 @@ export function CreatePathForm({ pathCount }: CreatePathFormProps) {
 function LoadingSpinner() {
   return (
     <svg
-      className="mr-2 h-4 w-4 animate-spin"
+      className="h-4 w-4 animate-spin"
       fill="none"
       viewBox="0 0 24 24"
     >

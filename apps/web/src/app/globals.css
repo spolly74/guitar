@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Warm neutral foundation */
+  --background: #faf9f7;
+  --background-subtle: #f5f3f0;
+  --foreground: #1c1917;
+  --foreground-muted: #57534e;
+  --foreground-faint: #a8a29e;
+
+  /* Borders */
+  --border: #e7e5e4;
+  --border-subtle: #f5f3f0;
+
+  /* Card surfaces */
+  --card: #ffffff;
+  --card-hover: #fafaf9;
+
+  /* Warm accent (amber) for progress and primary actions */
+  --accent: #f59e0b;
+  --accent-foreground: #ffffff;
+  --accent-muted: #fef3c7;
+  --accent-subtle: #fffbeb;
+
+  /* Success - warm green */
+  --success: #22c55e;
+  --success-muted: #dcfce7;
+  --success-subtle: #f0fdf4;
+
+  /* Warning - soft amber */
+  --warning: #f59e0b;
+  --warning-muted: #fef3c7;
+  --warning-subtle: #fffbeb;
+
+  /* Error - soft red */
+  --error: #ef4444;
+  --error-muted: #fee2e2;
+  --error-subtle: #fef2f2;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-faint: var(--foreground-faint);
+
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-subtle: var(--accent-subtle);
+
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-success-subtle: var(--success-subtle);
+
+  --color-warning: var(--warning);
+  --color-warning-muted: var(--warning-muted);
+  --color-warning-subtle: var(--warning-subtle);
+
+  --color-error: var(--error);
+  --color-error-muted: var(--error-muted);
+  --color-error-subtle: var(--error-subtle);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0c0a09;
+    --background-subtle: #1c1917;
+    --foreground: #fafaf9;
+    --foreground-muted: #a8a29e;
+    --foreground-faint: #57534e;
+
+    --border: #292524;
+    --border-subtle: #1c1917;
+
+    --card: #1c1917;
+    --card-hover: #292524;
+
+    --accent: #fbbf24;
+    --accent-foreground: #1c1917;
+    --accent-muted: #78350f;
+    --accent-subtle: #451a03;
+
+    --success: #4ade80;
+    --success-muted: #166534;
+    --success-subtle: #14532d;
+
+    --warning: #fbbf24;
+    --warning-muted: #78350f;
+    --warning-subtle: #451a03;
+
+    --error: #f87171;
+    --error-muted: #991b1b;
+    --error-subtle: #7f1d1d;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

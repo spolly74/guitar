@@ -4,6 +4,22 @@ import { useState } from "react";
 import type { LessonV2Content, DiagramSpec } from "@/lib/schemas/v2.schema";
 import { DiagramRenderer } from "@/components/chat/DiagramRenderer";
 import { LessonChat } from "@/components/chat/LessonChat";
+import {
+  ChatCircle,
+  CheckCircle,
+  CaretDown,
+  Fire,
+  Lightbulb,
+  Barbell,
+  Target,
+  ListChecks,
+  Info,
+  Warning,
+  BookmarkSimple,
+  Check,
+  Clock,
+  ListBullets,
+} from "@phosphor-icons/react";
 
 interface LessonViewV2Props {
   lessonId: string;
@@ -44,42 +60,53 @@ export function LessonViewV2({
   return (
     <div className="relative">
       {/* Header */}
-      <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-6">
+      <div className="mb-8 rounded-xl border border-border bg-card p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight">{lesson.title}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                {lesson.title}
+              </h1>
               {lesson.day_number && (
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                <span className="rounded-full bg-background-subtle px-2.5 py-0.5 text-xs font-medium text-foreground-muted">
                   Day {lesson.day_number}
                 </span>
               )}
               {isQuickPractice && (
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">
+                <span className="rounded-full bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-accent">
                   Quick Practice
                 </span>
               )}
             </div>
-            <p className="mt-2 text-sm text-zinc-600">{lesson.objective}</p>
+            <p className="mt-2 text-sm text-foreground-muted">{lesson.objective}</p>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-              <span>{lesson.estimated_minutes} minutes</span>
-              <span>{lesson.blocks.length} sections</span>
-              <span>{totalExercises} exercises</span>
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-foreground-muted">
+              <span className="flex items-center gap-1.5">
+                <Clock weight="regular" className="h-3.5 w-3.5" />
+                {lesson.estimated_minutes} minutes
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ListBullets weight="regular" className="h-3.5 w-3.5" />
+                {lesson.blocks.length} sections
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Target weight="regular" className="h-3.5 w-3.5" />
+                {totalExercises} exercises
+              </span>
             </div>
 
             {/* Progress bar */}
             {totalExercises > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>Progress</span>
-                  <span>
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-foreground-muted">Progress</span>
+                  <span className="font-medium text-foreground">
                     {completedCount}/{totalExercises} exercises ({progress}%)
                   </span>
                 </div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-border">
                   <div
-                    className="h-full bg-green-500 transition-all"
+                    className="h-full rounded-full bg-accent transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -92,16 +119,9 @@ export function LessonViewV2({
             {showChat && (
               <button
                 onClick={() => setIsChatOpen(true)}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-background-subtle"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+                <ChatCircle weight="regular" className="h-4 w-4" />
                 Chat
               </button>
             )}
@@ -111,9 +131,12 @@ export function LessonViewV2({
 
       {/* Prerequisites */}
       {lesson.prerequisites.length > 0 && (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="text-sm font-medium text-amber-900">Prerequisites</div>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-800">
+        <div className="mb-6 rounded-xl border border-warning/20 bg-warning-subtle p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-warning">
+            <Warning weight="fill" className="h-4 w-4" />
+            Prerequisites
+          </div>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-foreground-muted">
             {lesson.prerequisites.map((prereq, i) => (
               <li key={i}>{prereq}</li>
             ))}
@@ -135,9 +158,12 @@ export function LessonViewV2({
 
       {/* Key Takeaways */}
       {lesson.key_takeaways.length > 0 && (
-        <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4">
-          <div className="text-sm font-medium text-green-900">Key Takeaways</div>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-green-800">
+        <div className="mt-8 rounded-xl border border-success/20 bg-success-subtle p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-success">
+            <Lightbulb weight="fill" className="h-4 w-4" />
+            Key Takeaways
+          </div>
+          <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm text-foreground-muted">
             {lesson.key_takeaways.map((takeaway, i) => (
               <li key={i}>{takeaway}</li>
             ))}
@@ -147,27 +173,32 @@ export function LessonViewV2({
 
       {/* Next Preview */}
       {lesson.next_preview && (
-        <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-          <div className="text-sm font-medium text-zinc-700">Coming Next</div>
-          <p className="mt-1 text-sm text-zinc-600">{lesson.next_preview}</p>
+        <div className="mt-6 rounded-xl border border-border bg-background-subtle p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Target weight="regular" className="h-4 w-4 text-foreground-muted" />
+            Coming Next
+          </div>
+          <p className="mt-2 text-sm text-foreground-muted">{lesson.next_preview}</p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-8 flex flex-wrap items-center gap-3">
         {onComplete && progress === 100 && (
           <button
             onClick={onComplete}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-success px-5 text-sm font-medium text-white transition-colors hover:bg-success/90"
           >
+            <CheckCircle weight="fill" className="h-4 w-4" />
             Complete Lesson
           </button>
         )}
         {onSave && isQuickPractice && (
           <button
             onClick={onSave}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-background-subtle"
           >
+            <BookmarkSimple weight="regular" className="h-4 w-4" />
             Save to History
           </button>
         )}
@@ -183,12 +214,42 @@ export function LessonViewV2({
   );
 }
 
-const BLOCK_COLORS = {
-  warmup: { border: "border-orange-200", bg: "bg-orange-50", text: "text-orange-900" },
-  concept: { border: "border-blue-200", bg: "bg-blue-50", text: "text-blue-900" },
-  practice: { border: "border-purple-200", bg: "bg-purple-50", text: "text-purple-900" },
-  apply: { border: "border-green-200", bg: "bg-green-50", text: "text-green-900" },
-  review: { border: "border-zinc-200", bg: "bg-zinc-50", text: "text-zinc-900" },
+const BLOCK_CONFIG = {
+  warmup: {
+    icon: Fire,
+    label: "Warm-up",
+    headerBg: "bg-orange-50",
+    headerBorder: "border-orange-100",
+    iconColor: "text-orange-500",
+  },
+  concept: {
+    icon: Lightbulb,
+    label: "Concept",
+    headerBg: "bg-blue-50",
+    headerBorder: "border-blue-100",
+    iconColor: "text-blue-500",
+  },
+  practice: {
+    icon: Barbell,
+    label: "Practice",
+    headerBg: "bg-violet-50",
+    headerBorder: "border-violet-100",
+    iconColor: "text-violet-500",
+  },
+  apply: {
+    icon: Target,
+    label: "Apply",
+    headerBg: "bg-emerald-50",
+    headerBorder: "border-emerald-100",
+    iconColor: "text-emerald-500",
+  },
+  review: {
+    icon: ListChecks,
+    label: "Review",
+    headerBg: "bg-background-subtle",
+    headerBorder: "border-border",
+    iconColor: "text-foreground-muted",
+  },
 };
 
 function LessonBlock({
@@ -200,38 +261,38 @@ function LessonBlock({
   completedExercises: Set<string>;
   onToggleExercise: (id: string) => void;
 }) {
-  const colors = BLOCK_COLORS[block.type] || BLOCK_COLORS.review;
+  const config = BLOCK_CONFIG[block.type] || BLOCK_CONFIG.review;
+  const Icon = config.icon;
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <section className={`rounded-lg border ${colors.border} bg-white overflow-hidden`}>
+    <section className="overflow-hidden rounded-xl border border-border bg-card">
       <div
-        className={`flex cursor-pointer items-center justify-between px-6 py-4 ${colors.bg}`}
+        className={`flex cursor-pointer items-center justify-between px-5 py-4 ${config.headerBg} border-b ${config.headerBorder}`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <div className={`text-base font-semibold ${colors.text} capitalize`}>
-            {block.title}
+          <div className={`${config.iconColor}`}>
+            <Icon weight="duotone" className="h-5 w-5" />
           </div>
-          <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs font-medium">
-            {block.type}
+          <div className="font-medium text-foreground">{block.title}</div>
+          <span className="rounded-full bg-white/60 px-2 py-0.5 text-xs font-medium text-foreground-muted">
+            {config.label}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-zinc-600">{block.minutes} min</span>
-          <svg
-            className={`h-5 w-5 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <span className="text-sm text-foreground-muted">{block.minutes} min</span>
+          <CaretDown
+            weight="bold"
+            className={`h-4 w-4 text-foreground-muted transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
         </div>
       </div>
 
       {isExpanded && (
-        <div className="px-6 py-4">
+        <div className="px-5 py-5">
           {/* Sections */}
           {block.sections.length > 0 && (
             <SectionsRenderer sections={block.sections} />
@@ -239,7 +300,7 @@ function LessonBlock({
 
           {/* Exercises */}
           {block.exercises.length > 0 && (
-            <div className={`${block.sections.length > 0 ? "mt-6" : ""} space-y-4`}>
+            <div className={`${block.sections.length > 0 ? "mt-6" : ""} space-y-3`}>
               {block.exercises.map((exercise) => (
                 <ExerciseCard
                   key={exercise.id}
@@ -258,9 +319,6 @@ function LessonBlock({
 
 type Section = LessonV2Content["blocks"][0]["sections"][0];
 
-/**
- * Groups consecutive diagram sections together and renders them in a grid
- */
 function SectionsRenderer({ sections }: { sections: Section[] }) {
   const groups: Array<{ type: "diagrams" | "other"; items: Section[] }> = [];
 
@@ -271,7 +329,6 @@ function SectionsRenderer({ sections }: { sections: Section[] }) {
       section.type === "tablature";
 
     if (isDiagram) {
-      // Add to existing diagram group or create new one
       const lastGroup = groups[groups.length - 1];
       if (lastGroup?.type === "diagrams") {
         lastGroup.items.push(section);
@@ -287,7 +344,6 @@ function SectionsRenderer({ sections }: { sections: Section[] }) {
     <div className="space-y-4">
       {groups.map((group, groupIndex) => {
         if (group.type === "diagrams") {
-          // Render diagrams in a responsive grid
           const isAllChords = group.items.every((s) => s.type === "chord_diagram");
           const gridCols = isAllChords ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2";
           return (
@@ -301,7 +357,6 @@ function SectionsRenderer({ sections }: { sections: Section[] }) {
             </div>
           );
         } else {
-          // Render non-diagram sections normally
           return group.items.map((section, i) => (
             <ContentSection key={`${groupIndex}-${i}`} section={section} />
           ));
@@ -314,7 +369,7 @@ function SectionsRenderer({ sections }: { sections: Section[] }) {
 function ContentSection({ section }: { section: LessonV2Content["blocks"][0]["sections"][0] }) {
   if (section.type === "text" && typeof section.content === "string") {
     return (
-      <div className="prose prose-sm max-w-none text-zinc-700">
+      <div className="prose prose-sm max-w-none text-foreground-muted">
         <p className="whitespace-pre-wrap">{section.content}</p>
       </div>
     );
@@ -322,26 +377,18 @@ function ContentSection({ section }: { section: LessonV2Content["blocks"][0]["se
 
   if (section.type === "tip" && typeof section.content === "string") {
     return (
-      <div className="rounded-md border border-green-200 bg-green-50 p-3">
-        <div className="flex items-start gap-2">
-          <svg className="mt-0.5 h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-green-800">{section.content}</p>
-        </div>
+      <div className="flex items-start gap-3 rounded-lg border border-success/20 bg-success-subtle p-4">
+        <Info weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+        <p className="text-sm text-foreground-muted">{section.content}</p>
       </div>
     );
   }
 
   if (section.type === "warning" && typeof section.content === "string") {
     return (
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-        <div className="flex items-start gap-2">
-          <svg className="mt-0.5 h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <p className="text-sm text-amber-800">{section.content}</p>
-        </div>
+      <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning-subtle p-4">
+        <Warning weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+        <p className="text-sm text-foreground-muted">{section.content}</p>
       </div>
     );
   }
@@ -362,24 +409,22 @@ function ExerciseCard({
 
   return (
     <div
-      className={`rounded-lg border ${
-        isCompleted ? "border-green-200 bg-green-50/50" : "border-zinc-200 bg-white"
+      className={`rounded-xl border transition-colors ${
+        isCompleted
+          ? "border-success/20 bg-success-subtle"
+          : "border-border bg-card"
       }`}
     >
       <div className="flex items-start gap-3 px-4 py-3">
         <button
           onClick={onToggle}
-          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
             isCompleted
-              ? "border-green-500 bg-green-500 text-white"
-              : "border-zinc-300 bg-white"
+              ? "border-success bg-success text-white"
+              : "border-border bg-card hover:border-foreground-muted"
           }`}
         >
-          {isCompleted && (
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
+          {isCompleted && <Check weight="bold" className="h-3 w-3" />}
         </button>
 
         <div
@@ -387,27 +432,29 @@ function ExerciseCard({
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center justify-between gap-2">
-            <div className={`font-medium ${isCompleted ? "text-green-900" : "text-zinc-900"}`}>
+            <div
+              className={`font-medium ${
+                isCompleted ? "text-success" : "text-foreground"
+              }`}
+            >
               {exercise.name}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500">{exercise.minutes} min</span>
-              <svg
-                className={`h-4 w-4 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <span className="text-xs text-foreground-muted">{exercise.minutes} min</span>
+              <CaretDown
+                weight="bold"
+                className={`h-4 w-4 text-foreground-faint transition-transform ${
+                  isExpanded ? "rotate-180" : ""
+                }`}
+              />
             </div>
           </div>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-zinc-100 px-4 py-3">
-          <div className="prose prose-sm max-w-none text-zinc-700">
+        <div className="border-t border-border/50 px-4 py-4">
+          <div className="prose prose-sm max-w-none text-foreground-muted">
             <div className="whitespace-pre-wrap">{exercise.instructions_md}</div>
           </div>
 
@@ -429,9 +476,12 @@ function ExerciseCard({
 
           {/* Success Criteria */}
           {exercise.success_criteria.length > 0 && (
-            <div className="mt-4">
-              <div className="text-xs font-medium text-zinc-500">Success Criteria</div>
-              <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-zinc-600">
+            <div className="mt-5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-foreground-muted">
+                <Target weight="regular" className="h-3.5 w-3.5" />
+                Success Criteria
+              </div>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-foreground-muted">
                 {exercise.success_criteria.map((criterion, i) => (
                   <li key={i}>{criterion}</li>
                 ))}
@@ -441,9 +491,12 @@ function ExerciseCard({
 
           {/* Common Mistakes */}
           {exercise.common_mistakes.length > 0 && (
-            <div className="mt-4">
-              <div className="text-xs font-medium text-amber-600">Common Mistakes</div>
-              <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-amber-700">
+            <div className="mt-5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                <Warning weight="regular" className="h-3.5 w-3.5" />
+                Common Mistakes
+              </div>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-foreground-muted">
                 {exercise.common_mistakes.map((mistake, i) => (
                   <li key={i}>{mistake}</li>
                 ))}

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { LearningPlan } from "@/lib/schemas/v2.schema";
 import { CreatePathForm } from "./CreatePathForm";
 import { PathCard } from "./PathCard";
+import { Path } from "@phosphor-icons/react/dist/ssr";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,12 @@ export default async function LearningPathsPage() {
   const completedPaths = paths.filter((p) => p.plan_status === "completed");
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Learning Paths</h1>
-        <p className="text-sm text-zinc-600">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Learning Paths
+        </h1>
+        <p className="text-sm text-foreground-muted">
           Create structured learning paths with AI-generated curricula. Each path
           breaks down a topic into phases and daily lessons.
         </p>
@@ -78,9 +81,14 @@ export default async function LearningPathsPage() {
       )}
 
       {paths.length === 0 && (
-        <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <div className="text-base font-medium">No learning paths yet</div>
-          <p className="mt-1 text-sm text-zinc-600">
+        <div className="rounded-xl border border-border bg-card p-10 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-subtle">
+            <Path weight="duotone" className="h-7 w-7 text-accent" />
+          </div>
+          <h3 className="mt-5 text-lg font-semibold text-foreground">
+            No learning paths yet
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-foreground-muted">
             Enter a topic above to create your first learning path. The AI will
             generate a structured curriculum for you to review and approve.
           </p>
@@ -112,10 +120,10 @@ interface PathSectionProps {
 
 function PathSection({ title, description, paths, variant }: PathSectionProps) {
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-4">
       <div>
-        <div className="text-base font-semibold">{title}</div>
-        <div className="text-sm text-zinc-600">{description}</div>
+        <div className="text-base font-semibold text-foreground">{title}</div>
+        <div className="text-sm text-foreground-muted">{description}</div>
       </div>
 
       <div className="grid gap-3">

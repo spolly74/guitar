@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  ClockCounterClockwise,
+  Path,
+  Lightning,
+  ArrowRight,
+} from "@phosphor-icons/react";
 
 interface HistoryLesson {
   id: string;
@@ -42,17 +48,19 @@ export function HistoryClient({ lessons }: HistoryClientProps) {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">History</h1>
-        <p className="text-sm text-zinc-600">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          History
+        </h1>
+        <p className="text-sm text-foreground-muted">
           Your completed and saved lessons
         </p>
       </div>
 
       {/* Filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-zinc-600">Filter:</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-foreground-muted">Filter:</span>
         <div className="flex gap-1">
           <FilterButton
             label="All"
@@ -74,42 +82,38 @@ export function HistoryClient({ lessons }: HistoryClientProps) {
 
       {/* Lessons grouped by date */}
       {sortedDates.length === 0 ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center">
-          <div className="mx-auto h-12 w-12 text-zinc-300">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+        <div className="rounded-xl border border-border bg-card p-10 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-subtle">
+            <ClockCounterClockwise weight="duotone" className="h-7 w-7 text-accent" />
           </div>
-          <h3 className="mt-4 text-lg font-medium">No lessons yet</h3>
-          <p className="mt-2 text-sm text-zinc-600">
+          <h3 className="mt-5 text-lg font-semibold text-foreground">
+            No lessons yet
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-foreground-muted">
             Complete lessons from your learning paths or save quick practice
             sessions to see them here.
           </p>
-          <div className="mt-4 flex justify-center gap-3">
+          <div className="mt-6 flex justify-center gap-3">
             <Link
               href="/today-v2"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
             >
               Go to Today
+              <ArrowRight weight="bold" className="h-4 w-4" />
             </Link>
             <Link
               href="/learning-paths"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-background-subtle"
             >
               View Learning Paths
             </Link>
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {sortedDates.map((date) => (
             <div key={date}>
-              <div className="mb-3 text-sm font-medium text-zinc-500">
+              <div className="mb-3 text-sm font-medium text-foreground-muted">
                 {formatDateDisplay(date)}
               </div>
               <div className="space-y-2">
@@ -137,10 +141,10 @@ function FilterButton({
   return (
     <button
       onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         isActive
-          ? "bg-zinc-900 text-white"
-          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+          ? "bg-foreground text-background"
+          : "bg-background-subtle text-foreground-muted hover:bg-border hover:text-foreground"
       }`}
     >
       {label}
@@ -150,37 +154,41 @@ function FilterButton({
 
 function LessonCard({ lesson }: { lesson: HistoryLesson }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3">
+    <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:bg-card-hover">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium">{lesson.title}</span>
+          <span className="truncate font-medium text-foreground">
+            {lesson.title}
+          </span>
           {lesson.type === "learning_path" ? (
-            <span className="shrink-0 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
-              Learning Path
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-600">
+              <Path weight="bold" className="h-3 w-3" />
+              Path
             </span>
           ) : (
-            <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-              Quick Practice
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-subtle px-2 py-0.5 text-xs font-medium text-accent">
+              <Lightning weight="bold" className="h-3 w-3" />
+              Quick
             </span>
           )}
         </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-foreground-muted">
           {lesson.pathTitle && (
             <>
               <span>{lesson.pathTitle}</span>
-              <span>·</span>
+              <span className="text-foreground-faint">·</span>
             </>
           )}
           {lesson.dayNumber && (
             <>
               <span>Day {lesson.dayNumber}</span>
-              <span>·</span>
+              <span className="text-foreground-faint">·</span>
             </>
           )}
           <span>{lesson.estimatedMinutes} min</span>
           {lesson.completedAt && (
             <>
-              <span>·</span>
+              <span className="text-foreground-faint">·</span>
               <span>Completed {formatTime(lesson.completedAt)}</span>
             </>
           )}
@@ -188,7 +196,7 @@ function LessonCard({ lesson }: { lesson: HistoryLesson }) {
       </div>
       <Link
         href={`/history/${lesson.id}`}
-        className="ml-3 shrink-0 text-sm font-medium text-zinc-600 hover:text-zinc-900"
+        className="ml-4 shrink-0 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
       >
         View
       </Link>
